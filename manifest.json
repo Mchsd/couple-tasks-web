@@ -1,0 +1,17 @@
+{
+  "name": "我们的每日约定",
+  "short_name": "每日约定",
+  "description": "情侣共享的每日任务约定，一起完成每个约定",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1035",
+  "theme_color": "#1a1035",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💘</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

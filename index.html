@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1a1035">
+<title>我们的每日约定 💘</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💘</text></svg>">
+<style>
+:root{
+  --bg1:#1a1035; --bg2:#2d1b4e; --bg3:#3a1f5c;
+  --pink:#f7c8d8; --rose:#e8b4c8; --gold:#f5d9a8;
+  --heart:#ff6b9d; --deep:#ff8fb3;
+  --text:#fdf0f5; --dim:#c9a8c4; --faint:#8a6b9e;
+  --card:rgba(255,255,255,.07); --card-bd:rgba(255,200,220,.18);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+  font-family:"PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+  background:linear-gradient(160deg,var(--bg1),var(--bg2) 55%,var(--bg3));
+  background-attachment:fixed;color:var(--text);min-height:100vh;
+  overflow-x:hidden;padding-bottom:env(safe-area-inset-bottom);
+}
+/* ── 星空背景 ── */
+.stars{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.star{position:absolute;border-radius:50%;background:#fff;animation:twinkle 3s ease-in-out infinite}
+@keyframes twinkle{0%,100%{opacity:.15}50%{opacity:.9}}
+.moon{position:fixed;top:6%;right:8%;width:90px;height:90px;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,#fff8e1,#f5d9a8 60%,#e8c48a);
+  box-shadow:0 0 60px 15px rgba(245,217,168,.25);z-index:0;pointer-events:none}
+.moon::after{content:"";position:absolute;inset:0;border-radius:50%;
+  background:radial-gradient(circle at 60% 55%,transparent 42%,rgba(200,170,120,.28) 43%,transparent 46%),
+  radial-gradient(circle at 30% 70%,transparent 38%,rgba(200,170,120,.22) 39%,transparent 42%)}
+/* ── 布局 ── */
+.wrap{position:relative;z-index:1;max-width:560px;margin:0 auto;padding:20px 16px 40px}
+/* 头部: 双人剪影+名字 */
+header{display:flex;align-items:center;justify-content:center;gap:14px;padding:14px 0 4px}
+.couple{display:flex;align-items:flex-end;gap:-2px;position:relative}
+.couple .head{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.head-a{background:linear-gradient(135deg,#ff9ab5,#ff6b9d);transform:translateX(4px);z-index:2}
+.head-b{background:linear-gradient(135deg,#8fb3ff,#6b8bff);transform:translateX(-4px);z-index:1}
+.couple .heart-mini{position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:16px;animation:beat 1.6s ease-in-out infinite;z-index:3;filter:drop-shadow(0 0 6px rgba(255,107,157,.8))}
+@keyframes beat{0%,100%{transform:translateX(-50%) scale(1)}25%{transform:translateX(-50%) scale(1.25)}40%{transform:translateX(-50%) scale(.95)}}
+.names{text-align:center;margin-top:6px}
+.names .n{font-size:15px;color:var(--dim);letter-spacing:1px}
+.names .n b{color:var(--pink);font-weight:600}
+.names .amp{color:var(--heart);margin:0 8px;font-size:16px}
+.subtitle{text-align:center;font-size:12px;color:var(--faint);margin-top:2px;letter-spacing:2px}
+/* 连续天数 */
+.streak-row{display:flex;justify-content:center;align-items:center;gap:8px;margin:14px 0 4px}
+.streak-badge{display:inline-flex;align-items:center;gap:6px;padding:7px 18px;border-radius:999px;
+  background:rgba(255,107,157,.12);border:1px solid rgba(255,107,157,.35);font-size:14px;color:var(--pink)}
+.streak-badge .fire{animation:flame 1.8s ease-in-out infinite;display:inline-block}
+@keyframes flame{0%,100%{transform:scale(1) rotate(0)}50%{transform:scale(1.2) rotate(-6deg)}}
+.streak-badge b{font-size:18px;color:var(--gold)}
+/* 今日任务卡 */
+.day-label{text-align:center;font-size:12px;color:var(--faint);letter-spacing:4px;margin:18px 0 10px}
+.task-card{position:relative;background:var(--card);border:1px solid var(--card-bd);border-radius:18px;
+  padding:26px 22px 22px;backdrop-filter:blur(8px);box-shadow:0 8px 32px rgba(0,0,0,.25);
+  transition:transform .2s}
+.task-card.done{border-color:rgba(255,107,157,.5);background:rgba(255,107,157,.08)}
+.task-card .tape{position:absolute;top:-10px;left:50%;transform:translateX(-50%) rotate(-2deg);
+  width:110px;height:24px;background:rgba(245,217,168,.55);border-radius:3px;
+  box-shadow:0 2px 6px rgba(0,0,0,.2);z-index:2}
+.task-date{text-align:center;font-size:11px;color:var(--faint);letter-spacing:2px;margin-bottom:6px}
+.task-text{font-size:21px;line-height:1.6;text-align:center;font-weight:600;letter-spacing:1px;
+  word-break:break-word;padding:6px 0 2px}
+.task-text.empty{color:var(--faint);font-weight:400;font-size:17px}
+.setter-line{text-align:center;font-size:12px;color:var(--dim);margin-top:8px}
+.setter-line .heart-s{color:var(--heart)}
+/* 完成区 */
+.check-zone{margin-top:18px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.check-btn{display:inline-flex;align-items:center;gap:10px;padding:14px 42px;border:none;border-radius:999px;
+  font-size:17px;font-weight:600;color:#fff;cursor:pointer;letter-spacing:2px;
+  background:linear-gradient(135deg,var(--heart),var(--deep));
+  box-shadow:0 6px 24px rgba(255,107,157,.4);transition:all .2s}
+.check-btn:active{transform:scale(.95)}
+.check-btn:disabled{opacity:.6;cursor:default;transform:none}
+.check-btn.done{background:linear-gradient(135deg,#7ec9a0,#4da87a);box-shadow:0 6px 24px rgba(90,180,130,.35)}
+.done-info{text-align:center;font-size:13px;color:var(--dim)}
+.done-info b{color:var(--gold)}
+/* 留言输入 */
+.note-box{margin-top:14px;display:none}
+.note-box.show{display:block}
+.note-box textarea{width:100%;min-height:52px;border-radius:12px;border:1px solid var(--card-bd);
+  background:rgba(255,255,255,.06);color:var(--text);padding:10px 12px;font-size:14px;
+  font-family:inherit;resize:vertical;outline:none}
+.note-box textarea:focus{border-color:var(--heart)}
+.note-box textarea::placeholder{color:var(--faint)}
+.note-quick{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.q-btn{padding:5px 12px;border-radius:999px;border:1px solid var(--card-bd);background:rgba(255,255,255,.05);
+  color:var(--dim);font-size:12px;cursor:pointer;transition:all .2s}
+.q-btn:active{transform:scale(.92)}
+.q-btn:hover{color:var(--pink);border-color:var(--heart)}
+/* 设置任务 */
+.set-task{margin-top:16px;text-align:center}
+.set-task summary{list-style:none;cursor:pointer;font-size:13px;color:var(--dim);padding:8px}
+.set-task summary:hover{color:var(--pink)}
+.set-task .set-body{display:flex;gap:8px;margin-top:8px}
+.set-task input{flex:1;padding:10px 14px;border-radius:999px;border:1px solid var(--card-bd);
+  background:rgba(255,255,255,.06);color:var(--text);font-size:14px;outline:none}
+.set-task input:focus{border-color:var(--heart)}
+.set-task .who{display:flex;gap:6px;margin-bottom:8px;justify-content:center}
+.who-btn{padding:6px 16px;border-radius:999px;border:1px solid var(--card-bd);background:transparent;
+  color:var(--dim);font-size:13px;cursor:pointer;transition:all .2s}
+.who-btn.on{border-color:var(--heart);color:var(--pink);background:rgba(255,107,157,.12)}
+.mini-btn{padding:10px 20px;border-radius:999px;border:none;cursor:pointer;font-size:13px;
+  background:linear-gradient(135deg,var(--heart),var(--deep));color:#fff;font-weight:600}
+/* 回忆墙 */
+.wall{margin-top:28px}
+.wall-title{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--pink);cursor:pointer;
+  padding:10px 4px;user-select:none}
+.wall-title .arrow{transition:transform .3s;color:var(--dim)}
+.wall-title.open .arrow{transform:rotate(90deg)}
+.wall-body{display:none;flex-direction:column;gap:8px;max-height:380px;overflow-y:auto;padding:4px 2px}
+.wall-body.open{display:flex}
+.w-item{background:var(--card);border:1px solid var(--card-bd);border-radius:12px;padding:10px 14px;font-size:13px}
+.w-item .w-date{font-size:11px;color:var(--faint);margin-bottom:3px}
+.w-item .w-date-full{opacity:.55;font-size:10px;margin-left:6px;letter-spacing:.5px}
+.w-item .w-task{color:var(--text);word-break:break-word}
+.w-item .w-meta{font-size:11px;color:var(--dim);margin-top:4px}
+.w-item.done{border-left:3px solid #7ec9a0}
+.w-item.undone{border-left:3px solid var(--faint);opacity:.75}
+.w-item .w-note{color:var(--gold);font-style:italic;margin-top:3px}
+.w-empty{text-align:center;color:var(--faint);font-size:13px;padding:16px}
+/* 双人统计 */
+.stats-panel{margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.s-card{background:var(--card);border:1px solid var(--card-bd);border-radius:14px;padding:14px;text-align:center}
+.s-card .s-name{font-size:13px;color:var(--dim);margin-bottom:6px}
+.s-card .s-num{font-size:24px;font-weight:700;color:var(--pink)}
+.s-card .s-sub{font-size:11px;color:var(--faint);margin-top:4px}
+.s-card.a{border-top:3px solid #ff6b9d}
+.s-card.b{border-top:3px solid #6b8bff}
+.s-card.b .s-num{color:#9db8ff}
+/* 底部 */
+footer{margin-top:30px;text-align:center;font-size:11px;color:var(--faint);letter-spacing:1px}
+footer button{background:none;border:none;color:var(--faint);font-size:11px;cursor:pointer;text-decoration:underline}
+.sync-state{font-size:10px;color:var(--faint);opacity:.75;margin:6px 0 2px;letter-spacing:.5px}
+.sync-state.ok{color:var(--gold);opacity:.9}
+/* 名字弹窗 */
+.mask{position:fixed;inset:0;background:rgba(10,5,25,.7);backdrop-filter:blur(4px);z-index:50;
+  display:none;align-items:center;justify-content:center}
+.mask.show{display:flex}
+.modal{background:linear-gradient(160deg,#241543,#33205c);border:1px solid var(--card-bd);border-radius:18px;
+  padding:26px 24px;width:88%;max-width:380px;box-shadow:0 12px 48px rgba(0,0,0,.5)}
+.modal h3{text-align:center;color:var(--pink);font-size:17px;margin-bottom:18px}
+.modal .fld{margin-bottom:12px}
+.modal .fld label{display:block;font-size:12px;color:var(--dim);margin-bottom:5px}
+.modal .fld input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--card-bd);
+  background:rgba(255,255,255,.06);color:var(--text);font-size:14px;outline:none}
+.modal .fld input:focus{border-color:var(--heart)}
+.modal .modal-btns{display:flex;gap:10px;margin-top:18px}
+.modal .modal-btns button{flex:1;padding:10px;border-radius:999px;border:none;cursor:pointer;font-size:14px;font-weight:600}
+.modal .ok{background:linear-gradient(135deg,var(--heart),var(--deep));color:#fff}
+.modal .cancel{background:rgba(255,255,255,.1);color:var(--dim)}
+/* 爱心粒子动画 */
+.heart-burst{position:fixed;z-index:99;pointer-events:none;font-size:24px;animation:floatUp 1.6s ease-out forwards}
+@keyframes floatUp{0%{opacity:1;transform:translateY(0) scale(.6) rotate(0)}100%{opacity:0;transform:translateY(-140px) scale(1.3) rotate(20deg)}}
+/* 全屏庆祝 */
+.celebrate{position:fixed;inset:0;z-index:98;pointer-events:none;display:none}
+.celebrate.show{display:block}
+.celebrate .cx{position:absolute;font-size:26px;animation:cFall 2.6s ease-in forwards}
+@keyframes cFall{0%{transform:translateY(-10vh) rotate(0);opacity:1}100%{transform:translateY(110vh) rotate(360deg);opacity:.7}}
+/* 补签提示 */
+.toast{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:60;
+  background:rgba(36,21,67,.95);border:1px solid var(--heart);color:var(--pink);
+  padding:10px 22px;border-radius:999px;font-size:13px;display:none;box-shadow:0 6px 24px rgba(0,0,0,.4)}
+.toast.show{display:block;animation:toastIn 3s forwards}
+@keyframes toastIn{0%{opacity:0;transform:translate(-50%,-10px)}10%{opacity:1;transform:translate(-50%,0)}80%{opacity:1}100%{opacity:0}}
+@media (max-width:400px){.task-text{font-size:18px}.check-btn{padding:13px 34px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="stars" id="stars"></div>
+<div class="moon"></div>
+
+<div class="wrap">
+  <header>
+    <div class="couple">
+      <div class="head head-a" id="headA">🌸</div>
+      <span class="heart-mini">💗</span>
+      <div class="head head-b" id="headB">🌙</div>
+    </div>
+  </header>
+  <div class="names">
+    <span class="n"><b id="nameA">宝宝</b><span class="amp">♥</span><b id="nameB">宝贝</b></span>
+  </div>
+  <div class="subtitle">· 我们的每日约定 ·</div>
+
+  <div class="streak-row">
+    <span class="streak-badge"><span class="fire">🔥</span> 连续 <b id="streakNum">0</b> 天</span>
+  </div>
+
+  <div class="day-label">— 今日约定 · <span id="todayDate"></span> —</div>
+  <div class="task-card" id="taskCard">
+    <div class="tape"></div>
+    <div class="task-date" id="taskDate"></div>
+    <div class="task-text" id="taskText">今天还没有约定 ✨</div>
+    <div class="setter-line" id="setterLine"></div>
+
+    <div class="check-zone">
+      <button class="check-btn" id="checkBtn">💗 一起完成</button>
+      <div class="done-info" id="doneInfo" style="display:none"></div>
+      <div class="note-box" id="noteBox">
+        <textarea id="noteInput" placeholder="留一句话给 TA…（可选）"></textarea>
+        <div class="note-quick" id="noteQuick">
+          <button class="q-btn">想你啦 💕</button>
+          <button class="q-btn">超棒的！🌟</button>
+          <button class="q-btn">明天见 🌙</button>
+          <button class="q-btn">我爱你 ❤️</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="mini-btn" id="noteToggle" style="display:none">💌 留言</button>
+        <button class="mini-btn" id="uncheckBtn" style="display:none;background:rgba(255,255,255,.15)">↩️ 取消</button>
+      </div>
+    </div>
+
+    <details class="set-task" id="setTask">
+      <summary id="setTaskSummary">✏️ 我来定明天的约定…（今天已完成则设明天）</summary>
+      <div class="set-body">
+        <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+          <div class="who">
+            <button class="who-btn on" data-who="a" id="whoA">🌸 我</button>
+            <button class="who-btn" data-who="b" id="whoB">🌙 我</button>
+          </div>
+          <input id="taskInput" maxlength="100" placeholder="写下一个想一起做的事…">
+        </div>
+        <button class="mini-btn" id="taskSave">定下</button>
+      </div>
+    </details>
+  </div>
+
+  <div class="stats-panel">
+    <div class="s-card a">
+      <div class="s-name" id="statNameA">🌸 宝宝</div>
+      <div class="s-num" id="statDoneA">0</div>
+      <div class="s-sub" id="statSubA">完成 · 设了 0 个</div>
+    </div>
+    <div class="s-card b">
+      <div class="s-name" id="statNameB">🌙 宝贝</div>
+      <div class="s-num" id="statDoneB">0</div>
+      <div class="s-sub" id="statSubB">完成 · 设了 0 个</div>
+    </div>
+  </div>
+
+  <div class="wall">
+    <div class="wall-title" id="wallToggle"><span class="arrow">▶</span> 📖 回忆墙 <span id="wallCount"></span></div>
+    <div class="wall-body" id="wallBody"></div>
+  </div>
+
+  <footer>
+    <div>💘 从今天开始，一起完成每个约定</div>
+    <div class="sync-state" id="syncState"></div>
+    <button id="settingsBtn">⚙️ 设置名字</button>
+  </footer>
+</div>
+
+<!-- 名字设置弹窗 -->
+<div class="mask" id="nameMask">
+  <div class="modal">
+    <h3>💘 我们的名字</h3>
+    <div class="fld"><label>第一个名字（🌸）</label><input id="nameInputA" maxlength="20" placeholder="宝宝"></div>
+    <div class="fld"><label>第二个名字（🌙）</label><input id="nameInputB" maxlength="20" placeholder="宝贝"></div>
+    <div class="fld"><label>🔑 GitHub 同步令牌（选填，两人任填一次即同步）</label>
+      <input id="tokenInput" maxlength="100" placeholder="ghp_xxx 或 github_pat_xxx" style="font-size:12px;letter-spacing:.5px">
+      <div style="font-size:10px;color:var(--faint);margin-top:4px;line-height:1.5">仅用于读写私有仓库 data.json（Contents 权限）。不填则本机独立记录，不同步。</div>
+    </div>
+    <div class="modal-btns">
+      <button class="ok" id="nameSave">保存</button>
+      <button class="cancel" id="nameCancel">取消</button>
+    </div>
+  </div>
+</div>
+
+<div class="celebrate" id="celebrate"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ── 工具 ──
+const $ = id => document.getElementById(id);
+const state = {today:null, names:{a:'宝宝',b:'宝贝'}, me:'a', streak:0, usedRedos:[]};
+
+// ── 数据层: GitHub Contents API 模式 (私有仓库 data.json 双端同步) ──
+// 与 server.py 模式共用同一数据文件结构; 无 token 时降级 localStorage(独立模式)
+const GITHUB = {
+  owner: 'Mchsd',
+  repo: 'couple-tasks',
+  path: 'data.json',
+  token: localStorage.getItem('couple_token') || '',  // 由用户在设置页填入, 存 localStorage
+};
+let _ghSha = null;         // data.json 当前版本 sha (乐观锁)
+let _ghCache = null;       // 内存缓存 (避免每次读 API)
+let _localMode = false;    // true = localStorage 独立模式
+
+function defaultData(){
+  return {
+    names: {a:'宝宝', b:'宝贝'},
+    days: {},
+    used_redos: [],
+    created_at: new Date().toISOString().slice(0,19),
+  };
+}
+
+function localKey(){ return 'couple_tasks_local'; }
+function loadLocal(){
+  try { return JSON.parse(localStorage.getItem(localKey()) || 'null') || defaultData(); }
+  catch(e){ return defaultData(); }
+}
+function saveLocal(data){
+  localStorage.setItem(localKey(), JSON.stringify(data));
+  localStorage.setItem('couple_token', GITHUB.token);
+}
+
+function ghApi(method, suffix, body){
+  const opt = {method, headers:{'Accept':'application/vnd.github+json'}};
+  if(GITHUB.token) opt.headers['Authorization'] = 'Bearer ' + GITHUB.token;
+  if(body){ opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
+  return fetch(`https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}${suffix}`, opt)
+    .then(r => r.json().then(j => ({status:r.status, json:j})));
+}
+
+// 读取 data.json: 优先 GitHub, 404 则初始化; 失败降级 localStorage
+async function loadData(){
+  if(_ghCache) return _ghCache;
+  try{
+    const r = await ghApi('GET', '/contents/' + GITHUB.path);
+    if(r.status === 200 && r.json.encoding === 'base64'){
+      _ghSha = r.json.sha;
+      const text = atob(r.json.content.replace(/\n/g,''));
+      _ghCache = JSON.parse(text);
+      _localMode = false;
+      return _ghCache;
+    }
+    if(r.status === 404){
+      // 首次使用: 初始化 data.json 到 GitHub
+      _ghCache = defaultData();
+      _ghSha = null;
+      await saveData(_ghCache, true);
+      _localMode = false;
+      return _ghCache;
+    }
+    throw new Error('GitHub API ' + r.status);
+  }catch(e){
+    // 无网络/token 无效 → localStorage 独立模式
+    _ghCache = loadLocal();
+    _localMode = true;
+    return _ghCache;
+  }
+}
+
+// 写回 data.json (带 sha 乐观锁, 冲突重试一次)
+async function saveData(data, force=false){
+  _ghCache = data;
+  if(_localMode || !GITHUB.token){ saveLocal(data); return {ok:true, local:true}; }
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
+  const payload = {message:'update data', content};
+  if(_ghSha) payload.sha = _ghSha;
+  let r = await ghApi('PUT', '/contents/' + GITHUB.path, payload);
+  if(r.status === 409 && !force){  // sha 冲突: 重新读最新再写
+    const fresh = await loadData();
+    payload.sha = _ghSha;
+    r = await ghApi('PUT', '/contents/' + GITHUB.path, payload);
+  }
+  if(r.status === 200 || r.status === 201){
+    _ghSha = r.json.content.sha;
+    return {ok:true};
+  }
+  throw new Error('GitHub 写入失败 ' + r.status + ' ' + JSON.stringify(r.json).slice(0,200));
+}
+
+// ── 业务计算 (从 server.py 移植) ──
+function todayStr(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function getStreak(data){
+  const days = data.days || {};
+  let streak = 0;
+  let d = new Date();
+  const tStr = todayStr();
+  if(!(days[tStr] || {}).done){
+    d = new Date(d.getTime() - 86400000);
+  }
+  while(true){
+    const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const entry = days[ds];
+    if(entry && entry.done){ streak++; d = new Date(d.getTime() - 86400000); }
+    else break;
+  }
+  return streak;
+}
+function getStats(data){
+  const days = data.days || {};
+  const s = {a:{set:0,done:0}, b:{set:0,done:0}};
+  for(const entry of Object.values(days)){
+    if(entry.setter === 'a') s.a.set++;
+    else if(entry.setter === 'b') s.b.set++;
+    if(entry.done){
+      if(entry.done_by === 'a') s.a.done++;
+      else if(entry.done_by === 'b') s.b.done++;
+    }
+  }
+  return s;
+}
+function getHistory(data, limit=90){
+  const days = data.days || {};
+  return Object.keys(days).sort().reverse().slice(0, limit).map(ds => {
+    const e = days[ds];
+    return {date:ds, task:e.task||'', setter:e.setter, done:!!e.done,
+      done_by:e.done_by, note:e.note||'', done_at:e.done_at};
+  });
+}
+function buildState(data){
+  const ds = todayStr();
+  const t = (data.days || {})[ds] || {};
+  return {
+    today: {task:t.task||null, setter:t.setter, done:!!t.done, done_by:t.done_by,
+      note:t.note||'', done_at:t.done_at},
+    date: ds,
+    streak: getStreak(data),
+    used_redos: data.used_redos || [],
+    names: data.names || {a:'宝宝',b:'宝贝'},
+    stats: getStats(data),
+    history: getHistory(data),
+    total_days: Object.values(data.days||{}).filter(e=>e.task).length,
+    created_at: data.created_at,
+    local_mode: _localMode,
+  };
+}
+
+// ── api 兼容层: 本地 server 模式走 fetch, GitHub 模式走上述逻辑 ──
+async function api(path, method='GET', body=null){
+  if(path.startsWith('/api/')){
+    // 尝试本地 server (开发模式); 失败则用 GitHub 数据
+    if(!window.location.protocol.startsWith('file') && location.hostname !== '' && !location.hostname.includes('github.io')){
+      try{
+        const opt = {method, headers:{}};
+        if(body){opt.headers['Content-Type']='application/json'; opt.body=JSON.stringify(body);}
+        const r = await fetch(path, opt);
+        if(r.ok) return await r.json();
+      }catch(e){ /* 落到 GitHub 模式 */ }
+    }
+    const data = await loadData();
+    if(method === 'GET') return buildState(data);
+    if(path === '/api/task'){
+      const task = String(body.task||'').trim().slice(0,100);
+      if(!task) return {error:'任务不能为空'};
+      const ds = todayStr();
+      data.days = data.days || {};
+      data.days[ds] = data.days[ds] || {};
+      data.days[ds].task = task;
+      data.days[ds].setter = body.setter === 'b' ? 'b' : 'a';
+      data.days[ds].done = !!data.days[ds].done;
+      await saveData(data);
+      return buildState(data);
+    }
+    if(path === '/api/check'){
+      const ds = todayStr();
+      data.days = data.days || {};
+      const entry = data.days[ds] = data.days[ds] || {};
+      if(!entry.task) return {error:'今天还没有任务, 先设置一个吧'};
+      if(entry.done) return {error:'今天已经完成啦'};
+      entry.done = true;
+      entry.done_by = body.done_by === 'b' ? 'b' : 'a';
+      const now = new Date();
+      entry.done_at = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+      entry.note = String(body.note||'').trim().slice(0,200);
+      await saveData(data);
+      return buildState(data);
+    }
+    if(path === '/api/uncheck'){
+      const ds = todayStr();
+      const entry = (data.days || {})[ds];
+      if(entry && entry.done){
+        entry.done = false; entry.done_by = null; entry.done_at = null; entry.note = '';
+        await saveData(data);
+      }
+      return buildState(data);
+    }
+    if(path === '/api/names'){
+      const na = String(body.name_a||'').trim().slice(0,20);
+      const nb = String(body.name_b||'').trim().slice(0,20);
+      if(!na || !nb) return {error:'两个名字都不能为空'};
+      data.names = data.names || {};
+      data.names.a = na; data.names.b = nb;
+      await saveData(data);
+      return buildState(data);
+    }
+    if(path === '/api/reset'){
+      const fresh = defaultData();
+      fresh.names = data.names;  // 保留名字
+      await saveData(fresh, true);
+      return buildState(fresh);
+    }
+  }
+  const opt = {method, headers:{}};
+  if(body){opt.headers['Content-Type']='application/json'; opt.body=JSON.stringify(body);}
+  return fetch(path, opt).then(r=>r.json());
+}
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3000);
+}
+function fmtDate(iso){ // 2026-08-16 → 8月16日
+  const [y,m,d] = iso.split('-').map(Number);
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  if(iso === todayStr) return '今天';  // 字符串比较, 避免时分秒导致的 round 误差
+  const that = new Date(y, m-1, d);
+  const diff = Math.round((new Date(todayStr) - that)/86400000);  // 零点差值=整数天
+  if(diff===1) return '昨天';
+  if(diff>1 && diff<=7) return `${diff}天前`;
+  return `${m}月${d}日`;
+}
+function renderStars(){
+  const s = $('stars');
+  for(let i=0;i<60;i++){
+    const st = document.createElement('div');
+    st.className='star';
+    const sz = Math.random()*2.5+1;
+    st.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;animation-delay:${Math.random()*3}s`;
+    s.appendChild(st);
+  }
+}
+// ── 心形爆裂 ──
+function heartBurst(x,y){
+  const emojis = ['💗','💖','💕','💘','✨','🌸'];
+  for(let i=0;i<10;i++){
+    const h = document.createElement('div');
+    h.className='heart-burst';
+    h.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+    h.style.left = (x + (Math.random()*120-60)) + 'px';
+    h.style.top = (y + (Math.random()*60-30)) + 'px';
+    h.style.animationDelay = (Math.random()*0.3) + 's';
+    document.body.appendChild(h);
+    setTimeout(()=>h.remove(), 2000);
+  }
+}
+// ── 全屏心形烟花(成就) ──
+function celebrate(){
+  const c = $('celebrate'); c.classList.add('show');
+  const emojis = ['💖','💘','💝','🌹','💞','💕','✨'];
+  for(let i=0;i<36;i++){
+    const x = document.createElement('div');
+    x.className='cx';
+    x.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+    x.style.left = (Math.random()*100) + 'vw';
+    x.style.animationDelay = (Math.random()*1.2) + 's';
+    x.style.fontSize = (18+Math.random()*22) + 'px';
+    c.appendChild(x);
+  }
+  setTimeout(()=>{c.classList.remove('show'); c.innerHTML='';}, 3200);
+}
+// ── 渲染 ──
+function render(s){
+  state.today = s.today; state.names = s.names; state.streak = s.streak;
+  $('nameA').textContent = s.names.a;
+  $('nameB').textContent = s.names.b;
+  $('statNameA').textContent = '🌸 ' + s.names.a;
+  $('statNameB').textContent = '🌙 ' + s.names.b;
+  $('headA').textContent = '🌸'; $('headB').textContent = '🌙';
+  $('todayDate').textContent = fmtDate(s.date);
+  $('streakNum').textContent = s.streak;
+  $('taskDate').textContent = fmtDate(s.date) === '今天'
+    ? '📅 ' + s.date
+    : fmtDate(s.date);
+  // 同步模式指示
+  const syncEl = $('syncState');
+  if(s.local_mode || _localMode){
+    syncEl.textContent = '💾 本机独立模式（未同步）';
+    syncEl.classList.remove('ok');
+  } else if(GITHUB.token){
+    syncEl.textContent = '☁️ 已云端同步';
+    syncEl.classList.add('ok');
+  } else {
+    syncEl.textContent = '☁️ 云端同步未开启 · 点设置填入令牌';
+    syncEl.classList.remove('ok');
+  }
+
+  const t = s.today;
+  const card = $('taskCard'); const btn = $('checkBtn');
+  if(t.task){
+    $('taskText').textContent = t.task;
+    $('taskText').classList.remove('empty');
+    $('setterLine').innerHTML = t.setter
+      ? `<span class="heart-s">❤</span> ${s.names[t.setter]} 定的约定`
+      : '';
+    card.classList.toggle('done', !!t.done);
+    if(t.done){
+      btn.textContent = '✅ 完成啦'; btn.classList.add('done'); btn.disabled = true;
+      $('doneInfo').style.display = 'block';
+      $('doneInfo').innerHTML = `<b>${s.names[t.done_by]}</b> 完成了它 ${t.done_at ? '· '+t.done_at : ''}` +
+        (t.note ? `<br>💌 "${t.note}"` : '');
+      $('uncheckBtn').style.display = 'inline-block';
+      $('setTask').style.display = 'none';
+    } else {
+      btn.textContent = '💗 一起完成'; btn.classList.remove('done'); btn.disabled = false;
+      $('doneInfo').style.display = 'none';
+      $('uncheckBtn').style.display = 'none';
+      $('noteToggle').style.display = 'inline-block';
+    }
+  } else {
+    $('taskText').textContent = '今天还没有约定 ✨'; $('taskText').classList.add('empty');
+    $('setterLine').textContent = '';
+    card.classList.remove('done');
+    btn.textContent = '💗 一起完成'; btn.classList.remove('done'); btn.disabled = true;
+    $('doneInfo').style.display = 'none';
+    $('uncheckBtn').style.display = 'none';
+    $('noteToggle').style.display = 'none';
+  }
+  $('setTaskSummary').textContent = t.task
+    ? '✏️ 改今天的约定…'
+    : '✏️ 写下今天的约定…';
+
+  // 统计
+  $('statDoneA').textContent = s.stats.a.done;
+  $('statDoneB').textContent = s.stats.b.done;
+  $('statSubA').textContent = `完成 ${s.stats.a.done} · 设了 ${s.stats.a.set} 个`;
+  $('statSubB').textContent = `完成 ${s.stats.b.done} · 设了 ${s.stats.b.set} 个`;
+
+  // 回忆墙
+  $('wallCount').textContent = `(${s.history.length})`;
+  const wall = $('wallBody');
+  if(s.history.length === 0){
+    wall.innerHTML = '<div class="w-empty">还没有回忆，从今天开始吧 🌙</div>';
+  } else {
+    wall.innerHTML = s.history.map(h => `
+      <div class="w-item ${h.done?'done':'undone'}">
+        <div class="w-date">${fmtDate(h.date)}${h.done?' ✅':' ⏳'}<span class="w-date-full">${h.date}</span></div>
+        <div class="w-task">${escapeHtml(h.task||'(未设置)')}</div>
+        <div class="w-meta">${h.setter?`${s.names[h.setter]} 定的`:'—'}${h.done?` · ${s.names[h.done_by]} 完成`:''}</div>
+        ${h.note?`<div class="w-note">💌 ${escapeHtml(h.note)}</div>`:''}
+      </div>`).join('');
+  }
+}
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+// ── 事件 ──
+async function refresh(){ const s = await api('/api/state'); render(s); }
+
+$('checkBtn').addEventListener('click', async e => {
+  const btn = $('checkBtn');
+  const r = btn.getBoundingClientRect();
+  heartBurst(r.left + r.width/2, r.top);
+  const doneBy = state.me;
+  const note = $('noteInput').value.trim();
+  const res = await api('/api/check', 'POST', {done_by: doneBy, note});
+  if(res.error){ toast(res.error); return; }
+  const prev = state.streak;
+  render(res);
+  if(res.streak > prev && res.streak > 0 && (res.streak === 7 || res.streak === 30 || res.streak === 100)){
+    celebrate();
+    const msgs = {7:'🎉 连续 7 天！爱是日复一日的选择',30:'💍 连续一个月！把约定过成了习惯',100:'👑 100 天！这就是长久的模样'};
+    setTimeout(()=>toast(msgs[res.streak]||''), 500);
+  }
+  $('noteInput').value = '';
+  $('noteBox').classList.remove('show');
+});
+
+$('uncheckBtn').addEventListener('click', async () => {
+  const res = await api('/api/uncheck', 'POST', {});
+  if(res.error){ toast(res.error); return; }
+  render(res);
+});
+
+$('noteToggle').addEventListener('click', ()=>{
+  $('noteBox').classList.toggle('show');
+});
+
+// 留言快捷短语
+document.querySelectorAll('.q-btn').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    $('noteInput').value = b.textContent;
+  });
+});
+
+$('taskSave').addEventListener('click', async () => {
+  const task = $('taskInput').value.trim();
+  if(!task){ toast('写点什么吧～'); return; }
+  const res = await api('/api/task', 'POST', {task, setter: state.me});
+  if(res.error){ toast(res.error); return; }
+  render(res);
+  $('taskInput').value = '';
+  $('setTask').removeAttribute('open');
+  toast('约定已写下 💘');
+});
+
+// 设置者切换
+document.querySelectorAll('.who-btn').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    document.querySelectorAll('.who-btn').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    state.me = b.dataset.who;
+    $('whoA').textContent = '🌸 ' + state.names.a;
+    $('whoB').textContent = '🌙 ' + state.names.b;
+  });
+});
+
+// 回忆墙展开
+$('wallToggle').addEventListener('click', ()=>{
+  const open = $('wallToggle').classList.toggle('open');
+  $('wallBody').classList.toggle('open', open);
+});
+
+// 名字设置
+$('settingsBtn').addEventListener('click', ()=>{
+  $('nameInputA').value = state.names.a;
+  $('nameInputB').value = state.names.b;
+  $('tokenInput').value = GITHUB.token;
+  $('nameMask').classList.add('show');
+});
+$('nameCancel').addEventListener('click', ()=>$('nameMask').classList.remove('show'));
+$('nameSave').addEventListener('click', async ()=>{
+  const na = $('nameInputA').value.trim(), nb = $('nameInputB').value.trim();
+  if(!na || !nb){ toast('两个名字都要填哦'); return; }
+  // 保存 token (若填写) — 提前保存以便后续写操作走 GitHub
+  const tk = $('tokenInput').value.trim();
+  if(tk && tk !== GITHUB.token){
+    GITHUB.token = tk;
+    localStorage.setItem('couple_token', tk);
+    _ghCache = null; _ghSha = null; _localMode = false;  // 重置缓存走 GitHub
+  }
+  const res = await api('/api/names', 'POST', {name_a: na, name_b: nb});
+  if(res.error){ toast(res.error); return; }
+  render(res); $('nameMask').classList.remove('show');
+  toast(res.local_mode ? '已保存（本机模式）' : '已保存并同步 💘');
+});
+
+// 初始化
+renderStars();
+refresh();
+setInterval(refresh, 60000); // 每分钟同步(跨天自动刷新)
+</script>
+</body>
+</html>
