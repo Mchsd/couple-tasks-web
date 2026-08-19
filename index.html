@@ -133,14 +133,54 @@ header{display:flex;align-items:center;justify-content:center;gap:14px;padding:1
 .w-item .w-note{color:var(--gold);font-style:italic;margin-top:3px}
 .w-empty{text-align:center;color:var(--faint);font-size:13px;padding:16px}
 /* 双人统计 */
-.stats-panel{margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.s-card{background:var(--card);border:1px solid var(--card-bd);border-radius:14px;padding:14px;text-align:center}
+.stats-panel{margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:10px}.s-card{background:var(--card);border:1px solid var(--card-bd);border-radius:14px;padding:14px;text-align:center}
 .s-card .s-name{font-size:13px;color:var(--dim);margin-bottom:6px}
 .s-card .s-num{font-size:24px;font-weight:700;color:var(--pink)}
 .s-card .s-sub{font-size:11px;color:var(--faint);margin-top:4px}
 .s-card.a{border-top:3px solid #ff6b9d}
 .s-card.b{border-top:3px solid #6b8bff}
 .s-card.b .s-num{color:#9db8ff}
+/* ── 正字区块 ── */
+.zz-block{margin-top:18px;background:var(--card);border:1px solid var(--card-bd);border-radius:18px;
+  padding:16px 16px 14px;backdrop-filter:blur(8px)}
+.zz-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.zz-title{font-size:15px;color:var(--pink);font-weight:600;letter-spacing:1px}
+.zz-progress{margin-left:auto;font-size:12px;color:var(--dim)}
+.zz-cal-btn{background:none;border:none;font-size:16px;cursor:pointer;padding:6px 8px;border-radius:8px;transition:background .2s}
+.zz-cal-btn:hover{background:rgba(255,200,220,.12)}
+.zz-grid{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.zz-cell{width:56px;height:56px;background:rgba(255,255,255,.04);border:1px solid var(--card-bd);border-radius:10px;
+  position:relative;overflow:hidden;transition:border-color .3s}
+.zz-cell svg{width:100%;height:100%;display:block}
+.zz-cell .stroke{fill:#2d2442;transition:fill .4s,transform .3s;transform-box:fill-box;transform-origin:center}
+.zz-cell .stroke.lit{fill:url(#zzGrad)}
+.zz-cell .stroke.lit.pop{animation:zzPop .55s cubic-bezier(.34,1.4,.64,1)}
+@keyframes zzPop{0%{transform:scale(.82);filter:drop-shadow(0 0 0 rgba(255,126,157,0))}45%{transform:scale(1.07);filter:drop-shadow(0 0 12px rgba(255,126,157,.95))}100%{transform:scale(1);filter:drop-shadow(0 0 5px rgba(255,126,157,.55))}}
+.zz-cell.done{border-color:rgba(255,126,157,.55);background:rgba(255,126,157,.08)}
+.zz-cell.done::after{content:"✓";position:absolute;right:3px;top:0;font-size:11px;color:var(--heart);opacity:.8}
+.zz-hint{text-align:center;font-size:12px;color:var(--dim);margin-top:8px;min-height:18px}
+.zz-hint b{color:var(--gold)}
+.zz-gifts{display:flex;justify-content:center;gap:14px;margin-top:8px;flex-wrap:wrap}
+.zz-gift{font-size:12px;color:var(--dim)}
+.zz-gift b{color:var(--pink);font-size:14px;margin-left:2px}
+.zz-gift.love b{color:#c9a8ff}
+/* ── 日历热力图 ── */
+.cal-panel{margin-top:14px;background:var(--card);border:1px solid var(--card-bd);border-radius:16px;
+  padding:14px;backdrop-filter:blur(8px)}
+.cal-title{font-size:13px;color:var(--pink);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.cal-close{margin-left:auto;cursor:pointer;color:var(--dim);font-size:14px;padding:4px 8px;border-radius:6px}
+.cal-close:hover{background:rgba(255,200,220,.12)}
+.cal-heat{display:flex;gap:3px;width:max-content;overflow-x:auto;max-width:100%;padding-bottom:4px}
+.heat-col{display:flex;flex-direction:column;gap:3px}
+.heat-cell{width:11px;height:11px;border-radius:2.5px;background:rgba(255,255,255,.05)}
+.heat-cell.l1{background:rgba(255,107,157,.25)}
+.heat-cell.l2{background:rgba(255,107,157,.45)}
+.heat-cell.l3{background:rgba(255,107,157,.7)}
+.heat-cell.l4{background:linear-gradient(135deg,#ff6b9d,#c26bff)}
+.heat-cell.today{outline:1.5px solid var(--gold);outline-offset:1px}
+.cal-note{font-size:10px;color:var(--faint);margin-top:8px}
+.heat-legend{display:flex;align-items:center;gap:3px;margin-top:8px}
+.heat-legend .heat-cell{width:10px;height:10px}
 /* 底部 */
 footer{margin-top:30px;text-align:center;font-size:11px;color:var(--faint);letter-spacing:1px}
 footer button{background:none;border:none;color:var(--faint);font-size:11px;cursor:pointer;text-decoration:underline;
@@ -256,6 +296,29 @@ footer button:hover{color:var(--pink);background:rgba(255,200,220,.08)}
     </div>
   </div>
 
+  <!-- 正字区块: 共同攒画 → 正字 → 礼物 -->
+  <div class="zz-block">
+    <div class="zz-head">
+      <span class="zz-title">🤍 我们的正字</span>
+      <span class="zz-progress" id="zzProgress">0 / 25 画</span>
+      <button class="zz-cal-btn" id="calBtn" title="完成日历">📅</button>
+    </div>
+    <div class="zz-grid" id="zzGrid"></div>
+    <div class="zz-hint" id="zzHint">起点！攒出第一个「正」字吧 💕</div>
+    <div class="zz-gifts">
+      <span class="zz-gift">🎁 小惊喜 <b id="zzSmall">0</b></span>
+      <span class="zz-gift">🎉 大惊喜 <b id="zzBig">0</b></span>
+      <span class="zz-gift love">🤍 爱 <b id="zzLove">0</b></span>
+    </div>
+  </div>
+
+  <!-- 日历热力图面板 -->
+  <div class="cal-panel" id="calPanel" style="display:none">
+    <div class="cal-title">📅 完成日历 <span class="cal-close" id="calClose">✕</span></div>
+    <div class="cal-heat" id="calHeat"></div>
+    <div class="cal-note">最近 17 周 · 完成约定的日子</div>
+  </div>
+
   <div class="wall">
     <div class="wall-title" id="wallToggle"><span class="arrow">▶</span> 📖 回忆墙 <span id="wallCount"></span></div>
     <div class="wall-body" id="wallBody"></div>
@@ -287,6 +350,13 @@ footer button:hover{color:var(--pink);background:rgba(255,200,220,.08)}
 
 <div class="celebrate" id="celebrate"></div>
 <div class="toast" id="toast"></div>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="zzGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ff9ab5"/><stop offset="100%" stop-color="#c26bff"/>
+    </linearGradient>
+  </defs>
+</svg>
 
 <script>
 // ── 工具 ──
@@ -310,6 +380,7 @@ function defaultData(){
     names: {a:'宝宝', b:'宝贝'},
     days: {},
     used_redos: [],
+    zhengzi: {count:0, gifts_small:0, gifts_big:0, love_marks:0},
     created_at: new Date().toISOString().slice(0,19),
   };
 }
@@ -347,7 +418,10 @@ async function loadData(){
       return _ghCache;
     }
     if(r.status === 404){
-      // 首次使用: 初始化 data.json 到 GitHub
+      // GitHub 对"私有仓库无权访问"也返回 404(隐藏存在性)。
+      // 无 token 时无法区分"真不存在"vs"无权限" → 直接降级本地, 绝不覆盖 localStorage
+      if(!GITHUB.token){ throw new Error('no token (private repo hides as 404)'); }
+      // 有 token 且真不存在: 首次使用, 初始化 data.json 到 GitHub
       _ghCache = defaultData();
       _ghSha = null;
       await saveData(_ghCache, true);
@@ -428,6 +502,8 @@ function getHistory(data, limit=90){
 function buildState(data){
   const ds = todayStr();
   const t = (data.days || {})[ds] || {};
+  // 兼容旧数据: 无 zhengzi 字段时初始化
+  const zz = data.zhengzi || (data.zhengzi = {count:0, gifts_small:0, gifts_big:0, love_marks:0});
   return {
     today: {task:t.task||null, setter:t.setter, done:!!t.done, done_by:t.done_by,
       note:t.note||'', done_at:t.done_at},
@@ -437,6 +513,7 @@ function buildState(data){
     names: data.names || {a:'宝宝',b:'宝贝'},
     stats: getStats(data),
     history: getHistory(data),
+    zhengzi: zz,
     total_days: Object.values(data.days||{}).filter(e=>e.task).length,
     created_at: data.created_at,
     local_mode: _localMode,
@@ -480,6 +557,13 @@ async function api(path, method='GET', body=null){
       const now = new Date();
       entry.done_at = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
       entry.note = String(body.note||'').trim().slice(0,200);
+      // 正字联动: 完成约定 → 攒一画; 5画=小惊喜, 25画=大惊喜+爱字
+      const zz = data.zhengzi || (data.zhengzi = {count:0, gifts_small:0, gifts_big:0, love_marks:0});
+      zz.count = (zz.count || 0) + 1;
+      let milestone = null;
+      if(zz.count % 5 === 0){ zz.gifts_small = (zz.gifts_small||0) + 1; milestone = 'small'; }
+      if(zz.count % 25 === 0){ zz.gifts_big = (zz.gifts_big||0) + 1; zz.love_marks = (zz.love_marks||0) + 1; milestone = 'big'; }
+      zz.last_milestone = milestone;
       await saveData(data);
       return buildState(data);
     }
@@ -488,6 +572,9 @@ async function api(path, method='GET', body=null){
       const entry = (data.days || {})[ds];
       if(entry && entry.done){
         entry.done = false; entry.done_by = null; entry.done_at = null; entry.note = '';
+        // 正字联动: 取消完成 → 扣回一画 (不扣已得礼物)
+        const zz = data.zhengzi;
+        if(zz && zz.count > 0) zz.count -= 1;
         await saveData(data);
       }
       return buildState(data);
@@ -567,8 +654,11 @@ function celebrate(){
   setTimeout(()=>{c.classList.remove('show'); c.innerHTML='';}, 3200);
 }
 // ── 渲染 ──
-function render(s){
+function render(s, opts){
+  opts = opts || {};
   state.today = s.today; state.names = s.names; state.streak = s.streak;
+  state.zhengzi = s.zhengzi;
+  state.history = s.history;
   $('nameA').textContent = s.names.a;
   $('nameB').textContent = s.names.b;
   $('statNameA').textContent = '🌸 ' + s.names.a;
@@ -633,6 +723,9 @@ function render(s){
   $('statSubA').textContent = `完成 ${s.stats.a.done} · 设了 ${s.stats.a.set} 个`;
   $('statSubB').textContent = `完成 ${s.stats.b.done} · 设了 ${s.stats.b.set} 个`;
 
+  // 正字区块
+  renderZhengzi(s.zhengzi || {count:0, gifts_small:0, gifts_big:0, love_marks:0}, s.history, opts.animateZZ);
+
   // 回忆墙
   $('wallCount').textContent = `(${s.history.length})`;
   const wall = $('wallBody');
@@ -650,6 +743,153 @@ function render(s){
 }
 function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
+// ════════ 正字系统 (情侣版: 完成约定攒一画, 5画=正字=小惊喜, 25画=大惊喜+爱) ════════
+// hanzi-writer 数据: y-up 坐标系(原点左下), strokes 数组即标准书写顺序
+// 「正」: 1顶横(短) 2中竖 3中横 4左竖 5底横(长) → 上小下大
+const ZZ_STROKES = [
+  'M 505 667 Q 590 683 683 699 Q 744 712 754 720 Q 764 729 759 738 Q 752 751 719 761 Q 686 768 574 734 Q 421 701 321 693 Q 279 689 308 668 Q 354 641 431 655 Q 444 658 460 659 L 505 667 Z',
+  'M 534 154 Q 537 298 539 420 L 540 457 Q 543 634 544 635 Q 543 638 542 638 Q 523 657 505 667 C 480 683 449 687 460 659 Q 484 596 485 591 Q 485 231 484 149 C 484 119 533 124 534 154 Z',
+  'M 539 420 Q 578 411 616 422 Q 757 452 767 457 Q 777 466 772 475 Q 763 488 732 495 Q 699 501 667 487 Q 636 477 603 468 Q 573 462 540 457 C 510 452 510 426 539 420 Z',
+  'M 346 135 Q 322 345 327 402 Q 328 427 312 441 Q 285 459 254 468 Q 238 472 228 465 Q 221 458 228 441 Q 253 399 266 354 Q 276 309 300 131 C 304 101 349 105 346 135 Z',
+  'M 300 131 Q 203 124 100 114 Q 75 113 93 91 Q 109 73 131 66 Q 156 59 176 64 Q 467 131 884 110 Q 885 111 888 110 Q 912 109 918 119 Q 925 134 906 151 Q 839 203 784 190 Q 687 174 534 154 L 484 149 Q 417 143 346 135 L 300 131 Z',
+];
+let _zzBuilt = false;
+function buildZhengziGrid(){
+  if(_zzBuilt) return;
+  const grid = $('zzGrid');
+  for(let i=0;i<5;i++){
+    const cell = document.createElement('div');
+    cell.className = 'zz-cell';
+    cell.id = 'zzc'+i;
+    // y-up → y-down 翻转, 否则正字上下颠倒
+    let svg = `<svg viewBox="0 0 1024 1024"><g transform="translate(0,1024) scale(1,-1)">`;
+    ZZ_STROKES.forEach((d,k)=>{ svg += `<path class="stroke" id="zzs${i}_${k}" d="${d}"/>`; });
+    svg += `</g></svg>`;
+    cell.innerHTML = svg;
+    grid.appendChild(cell);
+  }
+  _zzBuilt = true;
+}
+function renderZhengzi(zz, history, animateFrom){
+  buildZhengziGrid();
+  const count = zz.count || 0;
+  $('zzProgress').textContent = `${count} / 25 画`;
+  $('zzSmall').textContent = zz.gifts_small || 0;
+  $('zzBig').textContent = zz.gifts_big || 0;
+  $('zzLove').textContent = zz.love_marks || 0;
+  for(let i=0;i<5;i++){
+    const cell = $('zzc'+i);
+    if(!cell) continue;
+    const lit = Math.max(0, Math.min(5, count - i*5));
+    cell.classList.toggle('done', lit >= 5);
+    for(let k=0;k<5;k++){
+      const s = $('zzs'+i+'_'+k);
+      if(!s) continue;
+      const nowLit = k < lit;
+      const wasLit = s.classList.contains('lit');
+      if(animateFrom && nowLit && !wasLit){
+        const delay = (i*5 + k) * 80;
+        setTimeout(()=>{
+          s.classList.add('lit'); s.classList.remove('pop');
+          try{ void s.getBBox(); }catch(e){}
+          s.classList.add('pop');
+          setTimeout(()=>s.classList.remove('pop'), 520);
+        }, delay);
+      } else {
+        s.classList.toggle('lit', nowLit);
+      }
+    }
+  }
+  // 提示
+  const needSmall = 5 - (count % 5);
+  const needBig = 25 - (count % 25);
+  const hint = $('zzHint');
+  if(count === 0) hint.innerHTML = '起点！攒出第一个「正」字吧 💕';
+  else if(count >= 25) hint.innerHTML = `攒满 5 个正字啦！新的一轮开始 🎉`;
+  else hint.innerHTML = `距小惊喜还差 <b>${needSmall}</b> 画 · 距大惊喜还差 <b>${needBig}</b> 画`;
+}
+
+// ════════ 日历热力图 (GitHub 风格, 完成记录) ════════
+function lkey(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function renderHeatmap(history){
+  const daily = {};
+  history.forEach(h => { if(h.done) daily[h.date] = (daily[h.date]||0) + 1; });
+  const weeks = 17;   // 最近17周(约4个月)
+  const today = new Date();
+  const start = new Date(today);
+  start.setDate(start.getDate() - (weeks*7 - 1));
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));  // 对齐周一
+  const todayKey = lkey(today);
+  const colCount = Math.ceil((today - start) / 86400000 / 7);
+  const html = [];
+  for(let w=0; w<colCount; w++){
+    let col = '<div class="heat-col">';
+    for(let r=0; r<7; r++){
+      const dt = new Date(start); dt.setDate(start.getDate() + w*7 + r);
+      const k = lkey(dt);
+      const n = daily[k] || 0;
+      const lv = (k > todayKey) ? '' : (n<=0 ? 0 : n===1 ? 1 : n===2 ? 2 : n===3 ? 3 : 4);
+      col += `<div class="heat-cell${lv ? ' l'+lv : ''}${k === todayKey ? ' today' : ''}" title="${k}：${n} 次完成"></div>`;
+    }
+    col += '</div>';
+    html.push(col);
+  }
+  $('calHeat').innerHTML = html.join('');
+  // 图例
+  const legend = document.createElement('div');
+  legend.className = 'heat-legend';
+  legend.innerHTML = '<span style="color:var(--faint);font-size:10px;margin-right:5px">少</span>'
+    + [0,1,2,3,4].map(l=>`<span class="heat-cell${l ? ' l'+l : ''}"></span>`).join('')
+    + '<span style="color:var(--faint);font-size:10px;margin-left:5px">多</span>';
+  const old = document.querySelector('.heat-legend');
+  if(old) old.remove();
+  $('calHeat').insertAdjacentElement('afterend', legend);
+}
+
+// ════════ 庆祝 (彩带/烟花/爱字) ════════
+function zzCelebrate(kind){
+  const c = $('celebrate');
+  if(kind === 'small'){
+    // 小惊喜: 彩带雨
+    c.classList.add('show');
+    const emojis = ['🎁','💝','🎀','✨','🌸','💕'];
+    for(let i=0;i<24;i++){
+      const x = document.createElement('div');
+      x.className = 'cx';
+      x.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+      x.style.left = (Math.random()*100) + 'vw';
+      x.style.animationDelay = (Math.random()*0.8) + 's';
+      x.style.fontSize = (16+Math.random()*18) + 'px';
+      c.appendChild(x);
+    }
+    setTimeout(()=>{ c.classList.remove('show'); c.innerHTML=''; }, 3000);
+    setTimeout(()=>toast('🎁 攒满一个正字！小惊喜到手～'), 600);
+  } else if(kind === 'big'){
+    // 大惊喜: 烟花 + 爱字
+    c.classList.add('show');
+    const emojis = ['🎉','💖','❤️','🌹','🎆','💘','✨'];
+    for(let i=0;i<44;i++){
+      const x = document.createElement('div');
+      x.className = 'cx';
+      x.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+      x.style.left = (Math.random()*100) + 'vw';
+      x.style.animationDelay = (Math.random()*1.4) + 's';
+      x.style.fontSize = (20+Math.random()*26) + 'px';
+      c.appendChild(x);
+    }
+    setTimeout(()=>{ c.classList.remove('show'); c.innerHTML=''; }, 3500);
+    setTimeout(()=>toast('🎉 五个正字！一个大惊喜 + 🤍 爱 +1'), 700);
+  }
+}
+
+// 日历面板开关
+$('calBtn').addEventListener('click', ()=>{
+  const p = $('calPanel');
+  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+  if(p.style.display === 'block') renderHeatmap(state.history || []);
+});
+$('calClose').addEventListener('click', ()=>{ $('calPanel').style.display = 'none'; });
+
 // ── 事件 ──
 async function refresh(){ const s = await api('/api/state'); render(s); }
 
@@ -662,7 +902,12 @@ $('checkBtn').addEventListener('click', async e => {
   const res = await api('/api/check', 'POST', {done_by: doneBy, note});
   if(res.error){ toast(res.error); return; }
   const prev = state.streak;
-  render(res);
+  const prevZZ = state.zhengzi ? state.zhengzi.count : 0;
+  render(res, {animateZZ: true});
+  // 正字里程碑庆祝
+  const zz = res.zhengzi || {};
+  if(zz.last_milestone === 'big') zzCelebrate('big');
+  else if(zz.last_milestone === 'small') zzCelebrate('small');
   if(res.streak > prev && res.streak > 0 && (res.streak === 7 || res.streak === 30 || res.streak === 100)){
     celebrate();
     const msgs = {7:'🎉 连续 7 天！爱是日复一日的选择',30:'💍 连续一个月！把约定过成了习惯',100:'👑 100 天！这就是长久的模样'};
