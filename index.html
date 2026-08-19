@@ -149,20 +149,22 @@ header{display:flex;align-items:center;justify-content:center;gap:14px;padding:1
 .zz-cal-btn{background:none;border:none;font-size:16px;cursor:pointer;padding:6px 8px;border-radius:8px;transition:background .2s}
 .zz-cal-btn:hover{background:rgba(255,200,220,.12)}
 .zz-grid{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
-.zz-cell{width:56px;height:56px;background:rgba(255,255,255,.04);border:1px solid var(--card-bd);border-radius:10px;
-  position:relative;overflow:hidden;transition:border-color .3s}
+.zz-cell{width:56px;height:56px;background:rgba(255,255,255,.04);border:1px solid var(--card-bd);border-radius:12px;
+  position:relative;overflow:hidden;transition:border-color .3s,box-shadow .3s,transform .2s}
 .zz-cell svg{width:100%;height:100%;display:block}
 .zz-cell .stroke{fill:#2d2442;transition:fill .4s,transform .3s;transform-box:fill-box;transform-origin:center}
 .zz-cell .stroke.lit{fill:url(#zzGrad)}
 .zz-cell .stroke.lit.pop{animation:zzPop .55s cubic-bezier(.34,1.4,.64,1)}
 @keyframes zzPop{0%{transform:scale(.82);filter:drop-shadow(0 0 0 rgba(255,126,157,0))}45%{transform:scale(1.07);filter:drop-shadow(0 0 12px rgba(255,126,157,.95))}100%{transform:scale(1);filter:drop-shadow(0 0 5px rgba(255,126,157,.55))}}
-.zz-cell.done{border-color:rgba(255,126,157,.55);background:rgba(255,126,157,.08)}
-.zz-cell.done::after{content:"✓";position:absolute;right:3px;top:0;font-size:11px;color:var(--heart);opacity:.8}
+.zz-cell.done{border-color:rgba(255,126,157,.6);background:radial-gradient(circle at 50% 40%,rgba(255,126,157,.16),rgba(255,126,157,.05));
+  box-shadow:0 0 14px rgba(255,126,157,.25),inset 0 0 10px rgba(255,126,157,.08);transform:translateY(-1px)}
+.zz-cell.done::after{content:"💗";position:absolute;right:2px;top:0;font-size:10px;animation:zzHeart 2.4s ease-in-out infinite}
+@keyframes zzHeart{0%,100%{opacity:.9;transform:scale(1)}50%{opacity:1;transform:scale(1.18)}}
 .zz-hint{text-align:center;font-size:12px;color:var(--dim);margin-top:8px;min-height:18px}
 .zz-hint b{color:var(--gold)}
-.zz-gifts{display:flex;justify-content:center;gap:14px;margin-top:8px;flex-wrap:wrap}
-.zz-gift{font-size:12px;color:var(--dim)}
-.zz-gift b{color:var(--pink);font-size:14px;margin-left:2px}
+.zz-gifts{display:flex;justify-content:center;gap:16px;margin-top:10px;flex-wrap:wrap;padding:0 4px}
+.zz-gift{font-size:12px;color:var(--dim);display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
+.zz-gift b{color:var(--pink);font-size:14px;margin-left:2px;min-width:14px;text-align:center}
 .zz-gift.love b{color:#c9a8ff}
 /* ── 日历热力图 ── */
 .cal-panel{margin-top:14px;background:var(--card);border:1px solid var(--card-bd);border-radius:16px;
@@ -173,10 +175,10 @@ header{display:flex;align-items:center;justify-content:center;gap:14px;padding:1
 .cal-heat{display:flex;gap:3px;width:max-content;overflow-x:auto;max-width:100%;padding-bottom:4px}
 .heat-col{display:flex;flex-direction:column;gap:3px}
 .heat-cell{width:11px;height:11px;border-radius:2.5px;background:rgba(255,255,255,.05)}
-.heat-cell.l1{background:rgba(255,107,157,.25)}
-.heat-cell.l2{background:rgba(255,107,157,.45)}
-.heat-cell.l3{background:rgba(255,107,157,.7)}
-.heat-cell.l4{background:linear-gradient(135deg,#ff6b9d,#c26bff)}
+.heat-cell.l1{background:rgba(194,107,255,.22)}
+.heat-cell.l2{background:rgba(194,107,255,.4)}
+.heat-cell.l3{background:rgba(255,107,157,.6)}
+.heat-cell.l4{background:linear-gradient(135deg,#ff6b9d,#c26bff);box-shadow:0 0 4px rgba(194,107,255,.4)}
 .heat-cell.today{outline:1.5px solid var(--gold);outline-offset:1px}
 .cal-note{font-size:10px;color:var(--faint);margin-top:8px}
 .heat-legend{display:flex;align-items:center;gap:3px;margin-top:8px}
