@@ -329,7 +329,9 @@ async function loadData(){
     const r = await ghApi('GET', '/contents/' + GITHUB.path);
     if(r.status === 200 && r.json.encoding === 'base64'){
       _ghSha = r.json.sha;
-      const text = atob(r.json.content.replace(/\n/g,''));
+      // 正确解码: base64 → 字节 → UTF-8 文本 (atob 直接 JSON.parse 会把中文乱码)
+      const bytes = Uint8Array.from(atob(r.json.content.replace(/\n/g,'')), c => c.charCodeAt(0));
+      const text = new TextDecoder('utf-8').decode(bytes);
       _ghCache = JSON.parse(text);
       _localMode = false;
       return _ghCache;
