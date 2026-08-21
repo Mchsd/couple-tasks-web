@@ -1,14 +1,15 @@
 {
-  "name": "我们的每日约定",
-  "short_name": "每日约定",
-  "description": "情侣共享的每日任务约定，一起完成每个约定",
-  "start_url": "/",
+  "name": "朝暮 DawnDusk · 情侣每日约定",
+  "short_name": "朝暮",
+  "description": "两情若是久长时，定不负朝朝暮暮。情侣每日约定、正字攒画、日历、倒数日。",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#1a1035",
   "theme_color": "#1a1035",
+  "lang": "zh-CN",
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💘</text></svg>",
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%91%3C/text%3E%3C/svg%3E",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
