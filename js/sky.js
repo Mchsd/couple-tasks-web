@@ -34,6 +34,8 @@ const SKY = (() => {
   let stars = [];            // 预生成星星
   let particles = [];
   let clouds = [];
+  let birds = [];            // 飞鸟
+  const SEAL_CHARS = { dawn: '晨', morning: '昼', noon: '午', afternoon: '暮', dusk: '昏', nightfall: '夜', night: '夜' };
   let reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let perfCap = 1;           // 性能降级系数 (0.5/1)
 
@@ -120,9 +122,9 @@ const SKY = (() => {
       phase = p;
       document.body.dataset.phase = p.id;
       initParticles();
-      // 时段印章 + 主题色联动
+      // 时段印章 + 主题色联动 (单字方印)
       const seal = document.getElementById('eraSeal');
-      if (seal) seal.textContent = p.label;
+      if (seal) seal.textContent = SEAL_CHARS[p.id] || p.label;
       const meta = document.querySelector('meta[name="theme-color"]');
       if (meta) {
         const tint = (p.id === 'night' || p.id === 'nightfall' || p.id === 'dusk') ? '#1a1f2e' : '#e9ddc4';
@@ -192,6 +194,118 @@ const SKY = (() => {
     drawClouds(dt);
     // 远山 (2-3 层剪影, 缓慢漂移)
     drawMountains(dt);
+    // 水墨装饰: 松树/飞鸟/竹枝
+    drawDecors(dt);
+  }
+
+  // ── 水墨装饰层: 中景松树 + 飞鸟雁阵 + 竹枝 (文人画意) ──
+  function drawDecors(dt) {
+    const night = phase.id === 'night' || phase.id === 'nightfall' || phase.id === 'dusk';
+    const ink = night ? 'rgba(14,20,40,0.72)' : 'rgba(44,50,62,0.6)';
+    const inkLight = night ? 'rgba(24,32,56,0.5)' : 'rgba(76,84,96,0.38)';
+    // 1) 松树 (中景, 右侧, 静态浓墨)
+    drawPine(W * 0.86, H * 0.955, H * 0.13, inkLight);
+    // 2) 飞鸟 (白天时段远处缓慢掠过)
+    if (!night) updateBirds(dt);
+    // 3) 竹枝 (左下边缘, 风摆, 浓墨)
+    drawBamboo(ink, dt);
+  }
+
+  function drawPine(x, baseY, h, color) {
+    // 松树: 倾斜主干 + 顶部伞状叶簇 (文人松, 每帧重画, 纯静态)
+    const lean = -6;
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineCap = 'round';
+    ctx.lineWidth = h * 0.05;
+    ctx.beginPath();
+    ctx.moveTo(x, baseY);
+    ctx.quadraticCurveTo(x + lean, baseY - h * 0.6, x + lean * 2.2, baseY - h);
+    ctx.stroke();
+    // 叶簇: 3-4 层水平扇形
+    for (let i = 0; i < 4; i++) {
+      const t = 0.25 + i * 0.2;
+      const cy = baseY - h * t;
+      const cx = x + lean * (t * 2.2 + 0.3);
+      const rw = h * (0.34 - i * 0.05);
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, rw, rw * 0.38, -0.12, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function updateBirds(dt) {
+    // 每 30-60s 生成一群鸟
+    if (birds.length === 0 && Math.random() < 0.012) {
+      const dir = Math.random() < 0.5 ? 1 : -1;
+      const n = 3 + Math.floor(Math.random() * 3);
+      const y0 = H * (0.12 + Math.random() * 0.2);
+      for (let i = 0; i < n; i++) {
+        birds.push({ x: dir > 0 ? -0.1 : 1.1, y: y0 + (Math.random() - 0.5) * 26 - i * 5,
+          s: 7 + Math.random() * 4, dir, ph: Math.random() * Math.PI * 2 });
+      }
+    }
+    for (const b of birds) {
+      b.x += b.dir * 0.00022 * dt;   // 极慢飞过
+      b.ph += 0.02;
+      // 双弧翅膀
+      const fl = Math.sin(b.ph * 1.4) * b.s * 0.35;
+      ctx.strokeStyle = 'rgba(60,64,76,0.55)';
+      ctx.lineWidth = 1.4;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(b.x * W - b.s * b.dir, b.y);
+      ctx.quadraticCurveTo(b.x * W - b.s * b.dir * 0.4, b.y + fl * 0.4, b.x * W, b.y);
+      ctx.quadraticCurveTo(b.x * W + b.s * b.dir * 0.4, b.y + fl * 0.4, b.x * W + b.s * b.dir, b.y);
+      ctx.stroke();
+    }
+    birds = birds.filter(b => b.x > -0.15 && b.x < 1.15);
+  }
+
+  function drawBamboo(ink, dt) {
+    ctx.save();
+    ctx.strokeStyle = ink;
+    ctx.fillStyle = ink;
+    ctx.lineCap = 'round';
+    // 主干: 左下边缘向上弯曲 (更靠边, 露出于内容间隙)
+    ctx.lineWidth = Math.max(2.5, W * 0.007);
+    const bx = W * 0.035;
+    ctx.beginPath();
+    ctx.moveTo(bx, H * 1.02);
+    ctx.quadraticCurveTo(bx + W * 0.013, H * 0.82, bx + W * 0.03, H * 0.6);
+    ctx.stroke();
+    // 竹节
+    for (let i = 0; i < 3; i++) {
+      const yy = H * (0.9 - i * 0.1);
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(bx + W * (0.004 + i * 0.002), yy);
+      ctx.lineTo(bx + W * (0.013 + i * 0.005), yy + 3);
+      ctx.stroke();
+    }
+    // 竹叶 (3簇, 风摆)
+    ctx.lineWidth = 1.8;
+    const sway = Math.sin(Date.now() * 0.0005) * 0.12 + Math.sin(Date.now() * 0.00023) * 0.08;
+    const clusters = [
+      { x: bx + W * 0.028, y: H * 0.62, a: -0.9, n: 4 },
+      { x: bx + W * 0.02, y: H * 0.72, a: -2.2, n: 3 },
+      { x: bx + W * 0.009, y: H * 0.85, a: -1.4, n: 3 },
+    ];
+    for (const c of clusters) {
+      for (let i = 0; i < c.n; i++) {
+        const ang = c.a + (i - c.n / 2) * 0.35 + sway;
+        const len = 16 + (i % 2) * 7;
+        const ex = c.x + Math.cos(ang) * len;
+        const ey = c.y + Math.sin(ang) * len;
+        ctx.beginPath();
+        ctx.moveTo(c.x, c.y);
+        ctx.quadraticCurveTo((c.x + ex) / 2, (c.y + ey) / 2 - 6, ex, ey);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
   }
 
   function drawSunMoon(dt) {
