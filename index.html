@@ -6,6 +6,8 @@
 <meta name="theme-color" content="#1a1035">
 <title>朝暮 DawnDusk · 不负朝朝暮暮</title>
 <meta name="description" content="朝暮 DawnDusk — 情侣每日约定、正字攒画、日历、倒数日。两情若是久长时，定不负朝朝暮暮。">
+<!-- 古风字体: 霞鹜文楷 (CDN 加载失败自动回落系统楷体) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-web@1.7.0/style.css">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💑</text></svg>">
 <link rel="stylesheet" href="css/style.css">
@@ -27,6 +29,7 @@
   </div>
   <div class="slogan">两情若是久长时，定不负朝朝暮暮</div>
   <div class="era-seal" id="eraSeal">夜半星河</div>
+  <div class="era-seal-sub" id="eraSealSub"></div>
 
   <!-- ================= 今天 ================= -->
   <div class="page show" id="page-today">
@@ -51,8 +54,8 @@
           </div>
         </div>
         <div style="display:flex;gap:10px">
-          <button class="mini-btn" id="noteToggle" style="display:none">💌 留言</button>
-          <button class="mini-btn" id="uncheckBtn" style="display:none;background:rgba(255,255,255,.15)">↩️ 取消</button>
+          <button class="mini-btn" id="noteToggle" style="display:none"><i data-ic="note"></i> 留言</button>
+          <button class="mini-btn" id="uncheckBtn" style="display:none;background:rgba(120,110,90,.25)"><i data-ic="uncheck"></i> 取消</button>
         </div>
       </div>
       <details class="set-task" id="setTask">
@@ -75,14 +78,14 @@
 
     <!-- 习惯打卡 -->
     <div class="section-block">
-      <div class="sec-head"><span class="sec-title">🌱 习惯打卡</span><span class="sec-sub">每天一点小日常</span></div>
+      <div class="sec-head"><span class="sec-title"><i data-ic="habit"></i> 习惯打卡</span><span class="sec-sub">每天一点小日常</span></div>
       <div id="habitList"></div>
       <div class="sec-empty" id="habitEmpty">还没有习惯 · 到「我们」页添加</div>
     </div>
 
     <!-- 长期任务倒计时 -->
     <div class="section-block">
-      <div class="sec-head"><span class="sec-title">⏳ 朝暮之约</span><span class="sec-sub">一起倒数重要日子</span></div>
+      <div class="sec-head"><span class="sec-title"><i data-ic="sand"></i> 朝暮之约</span><span class="sec-sub">一起倒数重要日子</span></div>
       <div id="cdList"></div>
       <div class="sec-empty" id="cdEmpty">还没有倒计时 · 到「我们」页添加</div>
     </div>
@@ -90,15 +93,15 @@
     <!-- 正字 -->
     <div class="zz-block">
       <div class="zz-head">
-        <span class="zz-title">🤍 我们的正字</span>
+        <span class="zz-title"><i data-ic="seal"></i> 我们的正字</span>
         <span class="zz-progress" id="zzProgress">0 / 25 画</span>
       </div>
       <div class="zz-grid" id="zzGrid"></div>
       <div class="zz-hint" id="zzHint">起点！攒出第一个「正」字吧 💕</div>
       <div class="zz-gifts">
-        <span class="zz-gift">🎁 小惊喜 <b id="zzSmall">0</b></span>
-        <span class="zz-gift">🎉 大惊喜 <b id="zzBig">0</b></span>
-        <span class="zz-gift love">🤍 爱 <b id="zzLove">0</b></span>
+        <span class="zz-gift"><i data-ic="gift"></i> 小惊喜 <b id="zzSmall">0</b></span>
+        <span class="zz-gift"><i data-ic="star"></i> 大惊喜 <b id="zzBig">0</b></span>
+        <span class="zz-gift love"><i data-ic="heart"></i> 爱 <b id="zzLove">0</b></span>
       </div>
     </div>
   </div>
@@ -117,7 +120,7 @@
       </div>
       <div id="calGrid"></div>
       <div class="cal-legend">
-        <span>✅ 约定完成</span><span>⭐ 节日</span><span>💧 经期</span><span>⏳ 倒数</span><span>❤️ 打一下</span>
+        <span>✓ 约定完成</span><span>✦ 节日</span><span>❖ 经期</span><span>⧗ 倒数</span><span>♥ 打一下</span>
       </div>
     </div>
   </div>
@@ -126,26 +129,26 @@
   <div class="page" id="page-memories">
     <div class="stats-panel">
       <div class="s-card a" style="grid-column:span 2">
-        <div class="s-name">🍀 我们的里程碑</div>
+        <div class="s-name"><i data-ic="flower"></i> 我们的里程碑</div>
         <div class="ms-row">
           <span class="ms-item">完成约定 <b id="msDone">0</b> 天</span>
           <span class="ms-item">共立约定 <b id="msTotal">0</b> 天</span>
         </div>
         <div class="ms-row">
-          <span class="ms-item">🎁 <b id="msGift">0</b></span>
-          <span class="ms-item">🎉 <b id="msBig">0</b></span>
-          <span class="ms-item">❤️ 打一下 <b id="msPoke">0</b></span>
+          <span class="ms-item"><i data-ic="gift"></i> <b id="msGift">0</b></span>
+          <span class="ms-item"><i data-ic="star"></i> <b id="msBig">0</b></span>
+          <span class="ms-item"><i data-ic="poke"></i> 打一下 <b id="msPoke">0</b></span>
         </div>
       </div>
     </div>
 
     <div class="cal-panel">
-      <div class="cal-title">📊 完成日历 <span class="cal-note-inline">最近 17 周</span></div>
+      <div class="cal-title"><i data-ic="calendar"></i> 完成日历 <span class="cal-note-inline">最近 17 周</span></div>
       <div class="cal-heat" id="heatMap"></div>
     </div>
 
     <div class="wall">
-      <div class="wall-title" id="wallToggle"><span class="arrow">▶</span> 📖 回忆墙 <span id="wallCount"></span></div>
+      <div class="wall-title" id="wallToggle"><span class="arrow">▶</span> <i data-ic="book"></i> 回忆墙 <span id="wallCount"></span></div>
       <div class="wall-body open" id="wallBody"></div>
     </div>
   </div>
@@ -153,7 +156,7 @@
   <!-- ================= 我们 ================= -->
   <div class="page" id="page-us">
     <div class="section-block">
-      <div class="sec-head"><span class="sec-title">💑 我们</span><span class="sec-sub" id="meToggle" style="cursor:pointer">我是「…」</span></div>
+      <div class="sec-head"><span class="sec-title"><i data-ic="heart"></i> 我们</span><span class="sec-sub" id="meToggle" style="cursor:pointer">我是「…」</span></div>
       <div class="set-grid">
         <input id="setNameA" maxlength="20" placeholder="名字一（🌸）">
         <input id="setNameB" maxlength="20" placeholder="名字二（🌙）">
@@ -168,7 +171,7 @@
     </div>
 
     <div class="section-block">
-      <div class="sec-head"><span class="sec-title">🎈 我们的节日</span></div>
+      <div class="sec-head"><span class="sec-title"><i data-ic="seal"></i> 我们的节日</span></div>
       <div id="festList"></div>
       <div class="hr"></div>
       <div class="fm-form">
@@ -184,7 +187,7 @@
     </div>
 
     <div class="section-block">
-      <div class="sec-head"><span class="sec-title">🌱 习惯管理</span></div>
+      <div class="sec-head"><span class="sec-title"><i data-ic="habit"></i> 习惯管理</span></div>
       <div id="habitManageList"></div>
       <div class="hr"></div>
       <div class="fm-form">
@@ -198,7 +201,7 @@
     </div>
 
     <div class="section-block">
-      <div class="sec-head"><span class="sec-title">⏳ 长期任务</span></div>
+      <div class="sec-head"><span class="sec-title"><i data-ic="sand"></i> 长期任务</span></div>
       <div id="cdManageList"></div>
       <div class="hr"></div>
       <div class="fm-form">
@@ -216,7 +219,7 @@
 
     <div class="section-block period-block">
       <div class="sec-head">
-        <span class="sec-title">💧 经期管理</span>
+        <span class="sec-title"><i data-ic="drop"></i> 经期管理</span>
         <label class="switch"><input type="checkbox" id="periodToggle"><span class="sw"></span></label>
       </div>
       <div class="hint-line">默认关闭 · 记录仅自己可见 · 主界面零暴露（日历淡化图标）</div>
@@ -232,13 +235,13 @@
             <label class="num-fld">持续 <input id="periodDuration" type="number" min="1" max="15" value="5"> 天</label>
           </div>
         </div>
-        <button class="mini-btn" id="periodMarkBtn" style="width:100%;margin-top:8px">💧 标记今天为经期第一天</button>
+        <button class="mini-btn" id="periodMarkBtn" style="width:100%;margin-top:8px"><i data-ic="drop"></i> 标记今天为经期第一天</button>
         <div id="periodList" style="margin-top:10px"></div>
       </div>
     </div>
 
     <div class="section-block">
-      <div class="sec-head"><span class="sec-title">💥 打一下统计</span></div>
+      <div class="sec-head"><span class="sec-title"><i data-ic="poke"></i> 打一下统计</span></div>
       <div class="poke-stats">
         <div class="ps-card a"><div class="ps-name" id="psNameA">🌸</div><div class="ps-num" id="pokeStatA">0</div><div class="ps-sub">被拍次数 · 连击 <b id="pokeStreakA">0</b></div></div>
         <div class="ps-card b"><div class="ps-name" id="psNameB">🌙</div><div class="ps-num" id="pokeStatB">0</div><div class="ps-sub">被拍次数 · 连击 <b id="pokeStreakB">0</b></div></div>
@@ -259,14 +262,14 @@
 
 <!-- 底部导航 -->
 <div class="tabbar">
-  <button class="tab-btn on" data-tab="today">☀️<span>今天</span></button>
-  <button class="tab-btn" data-tab="calendar">📅<span>日历</span></button>
-  <button class="tab-btn" data-tab="memories">📖<span>回忆</span></button>
-  <button class="tab-btn" data-tab="us">💑<span>我们</span></button>
+  <button class="tab-btn on" data-tab="today"><i class="tb-ic" data-ic="sun"></i><span>今天</span></button>
+  <button class="tab-btn" data-tab="calendar"><i class="tb-ic" data-ic="calendar"></i><span>日历</span></button>
+  <button class="tab-btn" data-tab="memories"><i class="tb-ic" data-ic="book"></i><span>回忆</span></button>
+  <button class="tab-btn" data-tab="us"><i class="tb-ic" data-ic="heart"></i><span>我们</span></button>
 </div>
 
 <!-- 打一下悬浮按钮 -->
-<button class="poke-fab" id="pokeBtn" title="打一下">💥</button>
+<button class="poke-fab" id="pokeBtn" title="打一下"><i data-ic="poke" style="width:1.3em;height:1.3em;display:block"></i></button>
 
 <!-- 日期详情弹层 -->
 <div class="mask" id="dayDetail">
@@ -287,6 +290,7 @@
 </svg>
 
 <script src="js/config.js"></script>
+<script src="js/icons.js"></script>
 <script src="js/data.js"></script>
 <script src="js/calendar.js"></script>
 <script src="js/anim.js"></script>

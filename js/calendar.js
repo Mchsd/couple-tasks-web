@@ -57,24 +57,24 @@ const CAL = (() => {
     const marks = [];
     const day = (_data.days || {})[ds];
     if (day) {
-      if (day.done) marks.push({ kind: 'done', icon: '✅', title: `约定完成：${day.task || ''}` });
-      if (day.task && !day.done) marks.push({ kind: 'todo', icon: '🗓', title: `约定：${day.task}` });
+      if (day.done) marks.push({ kind: 'done', icon: '✓', title: `约定完成：${day.task || ''}` });
+      if (day.task && !day.done) marks.push({ kind: 'todo', icon: '○', title: `约定：${day.task}` });
     }
     const fests = DATA.getDayFestivals(_data, ds);
-    fests.forEach(f => marks.push({ kind: 'fest', icon: f.emoji || '⭐', title: `节日：${f.name}` }));
+    fests.forEach(f => marks.push({ kind: 'fest', icon: (typeof ICONS !== 'undefined' ? ICONS.star : '✦'), title: `节日：${f.name}` }));
     // 经期 (仅 owner 可见/本地)
     const p = _data.period || {};
     if (p.enabled && (p.visible === 'both' || p.owner === 'a' && APP.me() === 'a' || p.owner === 'b' && APP.me() === 'b')) {
       if ((p.enc ? (p.localHistory || []).indexOf(ds) >= 0 : (p.history || []).indexOf(ds) >= 0)) {
-        marks.push({ kind: 'period', icon: p.visible === 'both' ? '💧' : '🩷', title: '经期记录' });
+        marks.push({ kind: 'period', icon: (typeof ICONS !== 'undefined' ? ICONS.drop : '◉'), title: '经期记录' });
       }
     }
     (_data.countdowns || []).forEach(cd => {
-      if (cd.target === ds) marks.push({ kind: 'cd', icon: '⏳', title: `倒计时到期：${cd.title}` });
+      if (cd.target === ds) marks.push({ kind: 'cd', icon: (typeof ICONS !== 'undefined' ? ICONS.sand : '⏳'), title: `倒计时到期：${cd.title}` });
     });
     const ph = (_data.pokes || {}).history || {};
     if (ph[ds] && ((ph[ds].a2b || 0) + (ph[ds].b2a || 0)) > 0) {
-      marks.push({ kind: 'poke', icon: '❤️', title: `打一下 ×${(ph[ds].a2b || 0) + (ph[ds].b2a || 0)}` });
+      marks.push({ kind: 'poke', icon: (typeof ICONS !== 'undefined' ? ICONS.heart : '♥'), title: `打一下 ×${(ph[ds].a2b || 0) + (ph[ds].b2a || 0)}` });
     }
     return marks;
   }
@@ -116,13 +116,13 @@ const CAL = (() => {
     } else {
       html += `<div class="dd-sub">当天没有约定</div>`;
     }
-    fests.forEach(f => html += `<div class="dd-row fest"><span class="dd-emoji">${f.emoji}</span> ${escapeHtml(f.name)}${f.custom ? '（自定义）' : ''}${f.lunar ? '（农历）' : ''}</div>`);
-    if (isPeriodDay) html += `<div class="dd-row period">💧 经期记录中</div>`;
-    (_data.countdowns || []).forEach(cd => { if (cd.target === ds) html += `<div class="dd-row">⏳ ${escapeHtml(cd.title)} 到期</div>`; });
+    fests.forEach(f => html += `<div class="dd-row fest"><span class="dd-emoji">${f.emoji || (typeof ICONS !== 'undefined' ? ICONS.star : '✦')}</span> ${escapeHtml(f.name)}${f.custom ? '（自定义）' : ''}${f.lunar ? '（农历）' : ''}</div>`);
+    if (isPeriodDay) html += `<div class="dd-row period">${typeof ICONS !== 'undefined' ? ICONS.drop : '◉'} 经期记录中</div>`;
+    (_data.countdowns || []).forEach(cd => { if (cd.target === ds) html += `<div class="dd-row">${typeof ICONS !== 'undefined' ? ICONS.sand : '⏳'} ${escapeHtml(cd.title)} 到期</div>`; });
     const ph = (_data.pokes || {}).history || {};
     const phd = ph[ds];
     if (phd && (phd.a2b || 0) + (phd.b2a || 0) > 0) {
-      html += `<div class="dd-row">❤️ 打一下 ×${(phd.a2b || 0) + (phd.b2a || 0)}</div>`;
+      html += `<div class="dd-row">${typeof ICONS !== 'undefined' ? ICONS.heart : '♥'} 打一下 ×${(phd.a2b || 0) + (phd.b2a || 0)}</div>`;
     }
     body.innerHTML = html;
     layer.classList.add('show');

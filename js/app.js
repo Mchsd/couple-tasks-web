@@ -20,6 +20,7 @@ const APP = (() => {
   async function init() {
     renderStars();
     bindEvents();
+    injectIcons();
     // 1. 本地数据立即渲染 (不触网)
     state.data = DATA.fastLocal();
     if (state.data.period && state.data.period.enabled) {
@@ -87,7 +88,17 @@ const APP = (() => {
   function renderHeader(d) {
     $('nameA').textContent = d.names.a;
     $('nameB').textContent = d.names.b;
-    $('headA').textContent = '🌸'; $('headB').textContent = '🌙';
+    $('headA').innerHTML = ICONS.flower;
+    $('headB').innerHTML = ICONS.moon;
+  }
+
+  // 注入古风 SVG 图标 (data-ic 占位符 → ICONS)
+  function injectIcons() {
+    document.querySelectorAll('[data-ic]').forEach(el => {
+      el.innerHTML = ICONS[el.dataset.ic] || '';
+      el.style.display = 'inline-flex';
+      el.style.alignItems = 'center';
+    });
   }
 
   function renderSyncState(d) {
@@ -115,10 +126,10 @@ const APP = (() => {
         `<span class="fb-text"><b>${state.festivalToday.name}</b>${state.festivalToday.custom ? ' · 我们的节日' : ''}</span>` +
         `<span class="fb-sub">${d.names.a} ♥ ${d.names.b}</span>`;
     } else {
-      // 无节日 → 显示连续横幅
+      // 无节日 → 显示连续横幅 (火焰印章)
       banner.style.display = 'block';
       banner.className = 'fest-banner plain';
-      banner.innerHTML = `<span class="fb-emoji">🔥</span><span class="fb-text">连续 <b>${state.streak}</b> 天</span>` +
+      banner.innerHTML = `<span class="fb-emoji">${ICONS.flame}</span><span class="fb-text">连续 <b>${state.streak}</b> 天</span>` +
         `<span class="fb-sub">${strings.bannerSub()}</span>`;
     }
 
@@ -129,26 +140,27 @@ const APP = (() => {
     if (t.task) {
       $('taskText').textContent = t.task;
       $('taskText').classList.remove('empty');
-      $('setterLine').innerHTML = t.setter ? `<span class="heart-s">❤</span> ${d.names[t.setter]} 定的约定` : '';
+      $('setterLine').innerHTML = t.setter ? `<i class="heart-s">${ICONS.heart}</i> ${d.names[t.setter]} 定的约定` : '';
       card.classList.toggle('done', !!t.done);
       if (t.done) {
-        btn.textContent = '✅ 完成啦'; btn.classList.add('done'); btn.disabled = true;
+        btn.innerHTML = `${ICONS.check} 完成啦`; btn.classList.add('done'); btn.disabled = true;
         $('doneInfo').style.display = 'block';
         $('doneInfo').innerHTML = `<b>${d.names[t.done_by]}</b> 完成了它 ${t.done_at ? '· ' + t.done_at : ''}` +
-          (t.note ? `<br>💌 "${CAL.escapeHtml(t.note)}"` : '');
+          (t.note ? `<br><i class="note-ic">${ICONS.note}</i> "${CAL.escapeHtml(t.note)}"` : '');
         $('uncheckBtn').style.display = 'inline-block';
         $('setTask').style.display = 'none';
       } else {
-        btn.textContent = '💗 一起完成'; btn.classList.remove('done'); btn.disabled = false;
+        btn.innerHTML = `${ICONS.heart} 一起完成`; btn.classList.remove('done'); btn.disabled = false;
         $('doneInfo').style.display = 'none';
         $('uncheckBtn').style.display = 'none';
         $('noteToggle').style.display = 'inline-block';
       }
     } else {
-      $('taskText').textContent = '今天还没有约定 ✨'; $('taskText').classList.add('empty');
+      $('taskText').textContent = '今天还没有约定';
+      $('taskText').classList.add('empty');
       $('setterLine').textContent = '';
       card.classList.remove('done');
-      btn.textContent = '💗 一起完成'; btn.classList.remove('done'); btn.disabled = true;
+      btn.innerHTML = `${ICONS.heart} 一起完成`; btn.classList.remove('done'); btn.disabled = true;
       $('doneInfo').style.display = 'none';
       $('uncheckBtn').style.display = 'none';
       $('noteToggle').style.display = 'none';
@@ -216,7 +228,7 @@ const APP = (() => {
       return `<div class="habit-row${doneToday ? ' done' : ''}">
         <button class="habit-check" data-hid="${h.id}" title="${doneToday ? '取消' : '打卡'}">${h.emoji}</button>
         <div class="habit-info">
-          <div class="habit-name">${CAL.escapeHtml(h.name)} ${h.owner === 'both' ? '💑' : h.owner === state.me ? '' : '💞'}</div>
+          <div class="habit-name">${CAL.escapeHtml(h.name)} ${h.owner === 'both' ? ICONS.heart : h.owner === state.me ? '' : `<i class="dim-ic">${ICONS.heart}</i>`}</div>
           <div class="habit-week">${week}</div>
         </div>
         <span class="habit-count">${marks.length}</span>
@@ -227,7 +239,7 @@ const APP = (() => {
         const r = await DATA.toggleHabit(b.dataset.hid, DATA.todayStr());
         state.data = r;
         renderHabits(r);
-        if (b.classList.contains('done')) ANIM.toast('已打卡继续加油 🌱');
+        if (b.classList.contains('done')) ANIM.toast('已打卡，继续加油');
       });
     });
   }
@@ -392,7 +404,7 @@ const APP = (() => {
     const custom = (d.festivals || []);
     const builtinCount = SOLAR_FESTIVALS.length + Object.keys(LUNAR_FESTIVAL_TABLE).length;
     list.innerHTML =
-      `<div class="fest-item builtin"><span class="fi-emoji">🎈</span><div class="fi-info"><div class="fi-name">内置节日库</div><div class="fi-sub">公历 5 个 · 农历 2026-2030 共 ${builtinCount} 天 · 当天自动动画</div></div></div>`
+      `<div class="fest-item builtin"><span class="fi-emoji">${ICONS.seal}</span><div class="fi-info"><div class="fi-name">内置节日库</div><div class="fi-sub">公历 5 个 · 农历 2026-2030 共 ${builtinCount} 天 · 当天自动动画</div></div></div>`
       + (custom.length ? custom.map(f => `
         <div class="fest-item">
           <span class="fi-emoji">${f.emoji}</span>
@@ -462,7 +474,7 @@ const APP = (() => {
     if (p.enabled && hist && hist.length) {
       list.innerHTML = hist.slice().sort().reverse().slice(0, 8).map(ds => `
         <div class="fm-row">
-          <span class="fm-emoji">💧</span>
+          <span class="fm-emoji">${ICONS.drop}</span>
           <span class="fm-name">${ds}</span>
           <span class="fm-sub">${p.storage === 'sync' ? '加密同步' : '仅本地'}` + (p.owner === state.me ? ' · 我' : ' · TA') + `</span>
           <button class="fi-del" data-pd="${ds}">✕</button>
@@ -578,7 +590,7 @@ const APP = (() => {
       renderAll();
       $('taskInput').value = '';
       $('setTask').removeAttribute('open');
-      ANIM.toast('约定已写下 💘');
+      ANIM.toast('约定已写下');
     });
     document.querySelectorAll('.who-btn').forEach(b => {
       b.addEventListener('click', () => {
@@ -599,7 +611,7 @@ const APP = (() => {
       state.data = res.data;
       ANIM.pokeAnim(btn);
       renderPokeStats(state.data);
-      ANIM.toast(`啪！你打了${state.names[state.me === 'a' ? 'b' : 'a']}一下${res.total >= 25 ? ' 👑' : ''}`);
+      ANIM.toast(`啪！你打了${state.names[state.me === 'a' ? 'b' : 'a']}一下${res.total >= 25 ? ' ✦' : ''}`);
     });
     // 回忆墙展开
     $('wallToggle').addEventListener('click', () => {
@@ -617,7 +629,7 @@ const APP = (() => {
       state.periodHistory = await refreshPeriodHistory(state.data);
       renderUs(state.data);
       renderToday(state.data);
-      ANIM.toast('已记录 💧');
+      ANIM.toast('已记录');
     });
     // 名字保存
     $('nameSave').addEventListener('click', async () => {
@@ -626,7 +638,7 @@ const APP = (() => {
       try {
         state.data = await DATA.setNames(na, nb);
         renderAll();
-        ANIM.toast('已保存并同步 💘');
+        ANIM.toast('已保存并同步');
       } catch (e) { ANIM.toast(e.message); }
     });
     // token 保存
@@ -637,7 +649,7 @@ const APP = (() => {
         state.data = await DATA.load(true);
         state.periodHistory = await refreshPeriodHistory(state.data);
         renderAll();
-        ANIM.toast(mode === 'synced' ? '☁️ 已连接云端同步' : '💾 已切回本机模式');
+        ANIM.toast(mode === 'synced' ? '已连接云端同步' : '已切回本机模式');
       } catch (e) { ANIM.toast('令牌无效：' + e.message); }
     });
     // 节日新增
@@ -653,7 +665,7 @@ const APP = (() => {
         state.data = await DATA.addFestival(name, mmdd, emoji, lunar, anim);
         renderUs(state.data);
         $('festName').value = ''; $('festDate').value = '';
-        ANIM.toast('节日已添加 🎈');
+        ANIM.toast('节日已添加');
       } catch (e) { ANIM.toast(e.message); }
     });
     // 习惯新增
@@ -665,7 +677,7 @@ const APP = (() => {
       state.data = await DATA.addHabit(name, emoji, owner);
       renderUs(state.data);
       $('habitName').value = '';
-      ANIM.toast('习惯已添加 🌱');
+      ANIM.toast('习惯已添加');
     });
     // 倒计时新增
     $('cdAdd').addEventListener('click', async () => {
@@ -677,7 +689,7 @@ const APP = (() => {
       state.data = await DATA.addCountdown(title, emoji, target, note);
       renderUs(state.data);
       $('cdTitle').value = ''; $('cdNote').value = '';
-      ANIM.toast('倒计时已添加 ⏳');
+      ANIM.toast('倒计时已添加');
     });
     // 经期开关
     $('periodToggle').addEventListener('change', async e => {

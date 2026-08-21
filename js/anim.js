@@ -5,8 +5,8 @@ const ANIM = (() => {
 
   const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // ── 通用粒子飘落 (彩带雨) ──
-  function confetti(count = 80, emojis = ['🎉', '✨', '💖', '🎊', '🌸'], duration = 2800) {
+  // ── 通用粒子飘落 (古风字花雨) ──
+  function confetti(count = 80, emojis = ['✦', '✧', '❖', '❁', '✿', '❀'], duration = 2800) {
     if (reduced) return;
     const layer = document.getElementById('fxLayer');
     if (!layer) return;
@@ -56,14 +56,14 @@ const ANIM = (() => {
   // ── 节日动画: 按强度 ──
   function festivalCelebrate(fest) {
     const lv = (fest.anim || 'light') === 'grand' ? 'grand' : 'light';
-    const emoji = fest.emoji || '⭐';
+    const emoji = fest.emoji || '✦';
     if (lv === 'grand') {
-      confetti(140, [emoji, '🎉', '💖', '✨', '🎊', '💘']);
+      confetti(140, [emoji, '✦', '❖', '❁', '✿', '❀']);
       fireworks();
-      toast(`🎊 ${fest.name}快乐！${DATA ? '' : ''}朝朝暮暮都要爱你`);
+      toast(`✦ ${fest.name}快乐！朝朝暮暮都要爱你`);
     } else {
-      confetti(60, [emoji, '✨', '💗']);
-      toast(`🎐 今天是 ${fest.name}`);
+      confetti(60, [emoji, '✦', '❁']);
+      toast(`❁ 今天是 ${fest.name}`);
     }
   }
 
@@ -104,18 +104,18 @@ const ANIM = (() => {
 
   // ── 完成约定庆祝 ──
   function taskDoneCelebrate() {
-    confetti(50, ['💗', '💖', '🌸', '✨', '💕']);
+    confetti(50, ['❁', '❀', '✦', '✿', '❃']);
     playTone('done');
   }
 
   // ── 里程碑庆祝 (正字) ──
   function milestone(kind) {
     if (kind === 'big') {
-      confetti(120, ['🎉', '💖', '❤️', '🌹', '🎆', '💘', '✨']);
+      confetti(120, ['✦', '❖', '❁', '❀', '✿', '❃', '✧']);
       fireworks();
       playTone('big');
     } else if (kind === 'small') {
-      confetti(60, ['🎁', '💝', '🎀', '✨', '🌸', '💕']);
+      confetti(60, ['❁', '❀', '✦', '✿', '❃']);
       playTone('small');
     }
   }

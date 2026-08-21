@@ -27,13 +27,13 @@ const SKY = (() => {
 
   let canvas, ctx, W, H, dpr = 1;
   let phase = null;          // 当前时段对象
-  let phaseId = 'night';
   let _lastPhaseCheck = -1;
+  let _prevSky = null;       // 上一时段渐变 (缓慢插值用)
+  let _phaseStart = 0;       // 时段切换时间戳
+  const FADE_DUR = 180000;   // 天空过渡时长 180s (缓慢变化)
   let stars = [];            // 预生成星星
   let particles = [];
   let clouds = [];
-  let mistPhase = 0;
-  let raf = 0;
   let reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let perfCap = 1;           // 性能降级系数 (0.5/1)
 
@@ -76,7 +76,7 @@ const SKY = (() => {
     // 预生成云
     for (let i = 0; i < 3; i++) {
       clouds.push({ x: Math.random(), y: 0.08 + Math.random() * 0.22, w: 0.3 + Math.random() * 0.3,
-        alpha: 0.25, sp: 0.004 + Math.random() * 0.006, a: Math.random() });
+        alpha: 0.25, sp: 0.0012 + Math.random() * 0.0018, a: Math.random() });
     }
     // 性能自适应: 缩小逻辑分辨率 (低端设备)
     updatePerfCap();
@@ -103,6 +103,11 @@ const SKY = (() => {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
+  function todayStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
   // 每 5 分钟检查时段切换
   function tickPhase() {
     const now = Math.floor(Date.now() / 300000);
@@ -111,6 +116,7 @@ const SKY = (() => {
     const h = nowHour();
     const p = getPhase(h);
     if (p !== phase) {
+      if (phase && phase.id !== p.id) { _prevSky = phase.sky; _phaseStart = Date.now(); }
       phase = p;
       document.body.dataset.phase = p.id;
       initParticles();
@@ -123,6 +129,15 @@ const SKY = (() => {
         meta.content = tint;
       }
     }
+    // 当日节气提示 (印章下方)
+    try {
+      const jieqi = (typeof JIEQI_TABLE !== 'undefined') ? JIEQI_TABLE[todayStr()] : null;
+      const sealSub = document.getElementById('eraSealSub');
+      if (sealSub) {
+        const label = jieqi ? (jieqi + ' · ' + (JIEQI_SEASON[jieqi] || '') + '始') : '';
+        if (sealSub.textContent !== label) sealSub.textContent = label;
+      }
+    } catch (e) { /* config 未加载时静默 */ }
   }
 
   function initParticles() {
@@ -136,21 +151,29 @@ const SKY = (() => {
 
   function makeParticle(type) {
     const base = { type, x: Math.random(), y: Math.random(), vx: 0, vy: 0, r: 1 + Math.random() * 2.2,
-      rot: Math.random() * Math.PI * 2, vr: (Math.random() - 0.5) * 0.02, ph: Math.random() * Math.PI * 2 };
-    if (type === 'petals') { base.emoji = '🌸'; base.s = 8 + Math.random() * 8; base.vy = 0.3 + Math.random() * 0.5; base.vx = (Math.random() - 0.5) * 0.4; }
-    if (type === 'fireflies') { base.emoji = '✨'; base.s = 3 + Math.random() * 4; base.vy = (Math.random() - 0.5) * 0.2; base.vx = (Math.random() - 0.5) * 0.2; }
-    if (type === 'sparks') { base.emoji = '✦'; base.s = 2 + Math.random() * 3; base.vy = -(0.1 + Math.random() * 0.3); base.vx = (Math.random() - 0.5) * 0.2; }
+      rot: Math.random() * Math.PI * 2, vr: (Math.random() - 0.5) * 0.008, ph: Math.random() * Math.PI * 2 };
+    if (type === 'petals') { base.emoji = '🌸'; base.s = 8 + Math.random() * 8; base.vy = 0.1 + Math.random() * 0.18; base.vx = (Math.random() - 0.5) * 0.16; }
+    if (type === 'fireflies') { base.emoji = '✨'; base.s = 3 + Math.random() * 4; base.vy = (Math.random() - 0.5) * 0.07; base.vx = (Math.random() - 0.5) * 0.07; }
+    if (type === 'sparks') { base.emoji = '✦'; base.s = 2 + Math.random() * 3; base.vy = -(0.04 + Math.random() * 0.1); base.vx = (Math.random() - 0.5) * 0.07; }
     if (type === 'stars') { base.s = 1 + Math.random() * 2; base.tw = Math.random() * Math.PI * 2; }
     return base;
   }
 
-  // 天空渐变 (带过渡: 渐变颜色不可直接 transition, 用两帧插值近似 — 直接按当前段绘制即可,
-  // 因为 phase 切换时 canvas 重绘自然无缝; body 的 data-phase 驱动 CSS 侧 120s 过渡)
+  // 天空渐变 (时段切换: 180s 缓慢插值过渡, 从上一时段的颜色渐变为当前时段)
   function drawSky(dt) {
+    let c0 = phase.sky[0], c1 = phase.sky[1], c2 = phase.sky[2];
+    if (_prevSky) {
+      const t = Math.min(1, (Date.now() - _phaseStart) / FADE_DUR);
+      const e = t * t * (3 - 2 * t);   // smoothstep
+      c0 = lerpColor(_prevSky[0], phase.sky[0], e);
+      c1 = lerpColor(_prevSky[1], phase.sky[1], e);
+      c2 = lerpColor(_prevSky[2], phase.sky[2], e);
+      if (t >= 1) _prevSky = null;
+    }
     const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, phase.sky[0]);
-    g.addColorStop(0.55, phase.sky[1]);
-    g.addColorStop(1, phase.sky[2]);
+    g.addColorStop(0, c0);
+    g.addColorStop(0.55, c1);
+    g.addColorStop(1, c2);
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
 
@@ -163,7 +186,7 @@ const SKY = (() => {
       ctx.fillRect(0, H * 0.72, W, H * 0.28);
     }
 
-    // 太阳/月亮
+    // 太阳/月亮 (含月相)
     drawSunMoon(dt);
     // 云
     drawClouds(dt);
@@ -176,7 +199,7 @@ const SKY = (() => {
     const h = nowHour();
     // 太阳: 日出(5-7)从东升 日中(11-14)高空 落(14-19)西沉
     if (phase.sun) {
-      const cx = W * (h < 11 ? 0.72 : 0.7), cy = H * 0.22;
+      const cx = W * 0.7, cy = H * 0.22;
       const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 130);
       glow.addColorStop(0, 'rgba(255,236,190,0.85)');
       glow.addColorStop(0.35, 'rgba(255,220,160,0.28)');
@@ -188,22 +211,69 @@ const SKY = (() => {
       ctx.fillStyle = '#fff3d6';
       ctx.fill();
     }
-    // 月亮 + 月晕
+    // 月亮 + 月晕 + 月相 (8 档, 近似算法: 2000-01-06 新月为基准, 29.53 天周期)
     if (phase.moon) {
-      const mx = W * 0.78, my = H * 0.16;
+      const mx = W * 0.78, my = H * 0.16, R = 20;
       const glow = ctx.createRadialGradient(mx, my, 0, mx, my, 90);
       glow.addColorStop(0, 'rgba(240,240,255,0.5)');
       glow.addColorStop(1, 'rgba(240,240,255,0)');
       ctx.fillStyle = glow;
       ctx.fillRect(mx - 90, my - 90, 180, 180);
+      const jd = (Date.now() / 86400000) + 2440587.5;
+      const lp = ((jd - 2451550.1) / 29.53058867) % 1;
+      const t2 = (lp < 0 ? lp + 1 : lp);
+      const phaseIdx = Math.round(t2 * 8) % 8;   // 0 新月 → 4 满月 → 7 残月
+      const LIT = '#f4f2ea', DARK = 'rgba(22,26,46,0.88)';
+      ctx.save();
       ctx.beginPath();
-      ctx.arc(mx, my, 20, 0, Math.PI * 2);
-      ctx.fillStyle = '#f4f2ea';
-      ctx.fill();
-      // 月面阴影
+      ctx.arc(mx, my, R, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.fillStyle = LIT;
+      ctx.fillRect(mx - R, my - R, R * 2, R * 2);
+      switch (phaseIdx) {
+        case 0: // 新月: 几乎全暗
+          ctx.fillStyle = DARK; ctx.fillRect(mx - R, my - R, R * 2, R * 2);
+          ctx.fillStyle = LIT;
+          ctx.beginPath(); ctx.arc(mx, my, R, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = DARK;
+          ctx.beginPath(); ctx.ellipse(mx + R * 0.88, my, R, R, 0, 0, Math.PI * 2); ctx.fill();
+          break;
+        case 1: // 蛾眉月 (右)
+          ctx.fillStyle = DARK; ctx.fillRect(mx - R, my - R, R * 2, R * 2);
+          ctx.beginPath(); ctx.arc(mx, my, R, 0, Math.PI * 2); ctx.fillStyle = LIT; ctx.fill();
+          ctx.beginPath(); ctx.ellipse(mx - R * 0.72, my, R, R, 0, 0, Math.PI * 2); ctx.fillStyle = DARK; ctx.fill();
+          break;
+        case 2: // 上弦月 (右半亮)
+          ctx.fillStyle = DARK; ctx.fillRect(mx - R, my - R, R * 2, R * 2);
+          ctx.beginPath(); ctx.arc(mx, my, R, 0, Math.PI * 2); ctx.fillStyle = LIT; ctx.fill();
+          ctx.beginPath(); ctx.ellipse(mx - R * 0.05, my, R * 0.1, R, 0, 0, Math.PI * 2); ctx.fillStyle = DARK; ctx.fill();
+          break;
+        case 3: // 盈凸月 (右大半)
+          ctx.fillStyle = DARK;
+          ctx.beginPath(); ctx.ellipse(mx - R * 0.9, my, R * 0.5, R, 0, 0, Math.PI * 2); ctx.fill();
+          break;
+        case 4: // 满月
+          break;
+        case 5: // 亏凸月 (左大半)
+          ctx.fillStyle = DARK;
+          ctx.beginPath(); ctx.ellipse(mx + R * 0.9, my, R * 0.5, R, 0, 0, Math.PI * 2); ctx.fill();
+          break;
+        case 6: // 下弦月 (左半亮)
+          ctx.fillStyle = DARK; ctx.fillRect(mx - R, my - R, R * 2, R * 2);
+          ctx.beginPath(); ctx.arc(mx, my, R, 0, Math.PI * 2); ctx.fillStyle = LIT; ctx.fill();
+          ctx.beginPath(); ctx.ellipse(mx + R * 0.05, my, R * 0.1, R, 0, 0, Math.PI * 2); ctx.fillStyle = DARK; ctx.fill();
+          break;
+        case 7: // 残月 (左)
+          ctx.fillStyle = DARK; ctx.fillRect(mx - R, my - R, R * 2, R * 2);
+          ctx.beginPath(); ctx.arc(mx, my, R, 0, Math.PI * 2); ctx.fillStyle = LIT; ctx.fill();
+          ctx.beginPath(); ctx.ellipse(mx + R * 0.72, my, R, R, 0, 0, Math.PI * 2); ctx.fillStyle = DARK; ctx.fill();
+          break;
+      }
+      ctx.restore();
+      // 月面阴影点缀
       ctx.beginPath();
       ctx.arc(mx - 6, my - 3, 4.2, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(180,175,160,0.5)';
+      ctx.fillStyle = 'rgba(180,175,160,0.4)';
       ctx.fill();
     }
   }
@@ -229,11 +299,11 @@ const SKY = (() => {
     // 三层远山, 颜色按时段 (日间淡墨, 夜间黛蓝)
     const night = phase.id === 'night' || phase.id === 'nightfall';
     const layers = [
-      { y: H * 0.62, amp: H * 0.06, color: night ? '#1c2340' : '#8a97a3', alpha: 0.35, speed: 0.002, seed: 7 },
-      { y: H * 0.74, amp: H * 0.08, color: night ? '#161c34' : '#6f7d8a', alpha: 0.5, speed: 0.004, seed: 23 },
-      { y: H * 0.88, amp: H * 0.09, color: night ? '#10152a' : '#55616d', alpha: 0.72, speed: 0.006, seed: 41 },
+      { y: H * 0.62, amp: H * 0.06, color: night ? '#1c2340' : '#8a97a3', alpha: 0.35, speed: 0.001, seed: 7 },
+      { y: H * 0.74, amp: H * 0.08, color: night ? '#161c34' : '#6f7d8a', alpha: 0.5, speed: 0.002, seed: 23 },
+      { y: H * 0.88, amp: H * 0.09, color: night ? '#10152a' : '#55616d', alpha: 0.72, speed: 0.003, seed: 41 },
     ];
-    const tOff = (Date.now() * 0.00001);
+    const tOff = (Date.now() * 0.000004);   // 漂移速度大幅放慢
     for (const L of layers) {
       ctx.beginPath();
       ctx.moveTo(0, H);

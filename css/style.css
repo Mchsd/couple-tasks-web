@@ -2,10 +2,26 @@
    日间: 宣纸米色 × 墨字 × 朱砂点缀 | 夜间: 黛蓝夜空 × 米金字
    body[data-phase] 由 sky.js 驱动, 主题切换平滑过渡 */
 :root{
-  --font-title:"STKaiti","KaiTi","Kaiti SC","LXGW WenKai","DFKai-SB","楷体",serif;
-  --font-body:"Songti SC","STSong","SimSun","Noto Serif SC",serif;
+  --font-title:"LXGW WenKai","STKaiti","KaiTi","Kaiti SC","DFKai-SB","楷体",serif;
+  --font-body:"LXGW WenKai","Songti SC","STSong","SimSun","Noto Serif SC",serif;
   --tabbar-h:64px;
 }
+/* ── 古风图标通用 (内联 SVG, currentColor 继承) ── */
+svg{vertical-align:-.12em}
+.tb-ic{font-size:20px;color:inherit}
+.sec-title svg,.zz-title svg,.cal-title svg{width:1.05em;height:1.05em;vertical-align:-.12em;margin-right:.25em}
+.fb-emoji svg{width:26px;height:26px}
+.heart-s svg,.note-ic svg,.dim-ic svg{width:1em;height:1em}
+.habit-name svg{width:.9em;height:.9em}
+.ms-item svg{width:13px;height:13px;vertical-align:-2px}
+.fm-emoji svg,.fi-emoji svg{width:19px;height:19px}
+.zz-gift svg{width:13px;height:13px;vertical-align:-2px}
+.mk svg{width:8px;height:8px;vertical-align:-.5px}
+.dd-row svg{width:1em;height:1em;vertical-align:-.12em}
+/* 节气小字 (印章下方) */
+.era-seal-sub{position:absolute;right:14px;top:90px;font-family:var(--font-title);
+  font-size:10px;color:var(--gold);letter-spacing:1px;writing-mode:vertical-rl;
+  opacity:.8;z-index:1;pointer-events:none}
 /* ═══ 日间主题 (宣纸) ═══ */
 body[data-phase="dawn"],body[data-phase="morning"],body[data-phase="noon"],body[data-phase="afternoon"]{
   --text:#3a3226; --dim:#6b5f4a; --faint:#9a8c72;
@@ -192,6 +208,7 @@ header{display:flex;align-items:center;justify-content:center;gap:14px;padding:1
 @keyframes zzHeart{0%,100%{opacity:.9;transform:scale(1)}50%{opacity:1;transform:scale(1.18)}}
 .zz-hint{text-align:center;font-size:12px;color:var(--dim);margin-top:8px;min-height:18px}
 .zz-hint b{color:var(--gold)}
+.zz-hint .hint-ic{font-size:13px}
 .zz-gifts{display:flex;justify-content:center;gap:16px;margin-top:10px;flex-wrap:wrap;padding:0 4px}
 .zz-gift{font-size:12px;color:var(--dim);display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
 .zz-gift b{color:var(--heart);font-size:14px;margin-left:2px;min-width:14px;text-align:center}
