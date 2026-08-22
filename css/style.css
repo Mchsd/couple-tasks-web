@@ -455,3 +455,60 @@ body.shake{animation:shakeX .4s ease}
 /* ── 响应 ── */
 @media (max-width:400px){.task-text{font-size:18px}.check-btn{padding:13px 34px}.cal-sub{display:none}.brand-title{font-size:26px}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ════════ V4: 登录门 (古风匾额) ════════ */
+body.gate-open .tabbar, body.gate-open .poke-fab { display: none; }
+.login-gate{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(180deg,#0d0a2a 0%,#1a1035 45%,#2a1a4a 75%,#3a2a5a 100%);
+  padding:20px;overflow:hidden}
+.gate-stars{position:absolute;inset:0;pointer-events:none}
+.gate-star{position:absolute;border-radius:50%;background:#fff;opacity:.7;animation:gateTwinkle 3s ease-in-out infinite}
+@keyframes gateTwinkle{0%,100%{opacity:.15;transform:scale(.8)}50%{opacity:.9;transform:scale(1.15)}}
+.gate-card{position:relative;width:100%;max-width:340px;background:linear-gradient(160deg,rgba(46,36,72,.92),rgba(30,24,52,.95));
+  border:1px solid rgba(212,175,55,.35);border-radius:16px;padding:30px 26px 30px;text-align:center;
+  box-shadow:0 18px 60px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.04);backdrop-filter:blur(10px)}
+.gate-plaque{display:inline-flex;gap:10px;background:linear-gradient(180deg,#5a3a1a,#3a2510);
+  border:2px solid #c8a04a;border-radius:8px;padding:10px 24px;box-shadow:0 4px 14px rgba(0,0,0,.4), inset 0 1px 3px rgba(255,255,255,.15)}
+.gate-plaque span{color:#f0d48a;font-size:32px;font-weight:700;font-family:var(--font-title);letter-spacing:6px;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.gate-brand{color:#c8a04a;font-size:11px;letter-spacing:6px;margin-top:10px;opacity:.85}
+.gate-couplet{color:#d8cba8;font-size:13px;letter-spacing:1px;margin-top:12px;font-family:var(--font-title);opacity:.9}
+.gate-divider{display:flex;align-items:center;gap:12px;margin:20px 0}
+.gd-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(200,160,74,.5),transparent)}
+.gd-seal{width:34px;height:34px;background:linear-gradient(135deg,#c0503a,#a03424);color:#fff;font-size:17px;font-family:var(--font-title);
+  display:inline-flex;align-items:center;justify-content:center;border-radius:5px;
+  box-shadow:0 2px 6px rgba(0,0,0,.4), inset 0 0 0 2px rgba(255,255,255,.12)}
+.gate-title{color:#f0d48a;font-size:18px;font-family:var(--font-title);letter-spacing:3px;margin-bottom:6px}
+.gate-desc{color:#cfc3a4;font-size:13px;line-height:1.75;margin-bottom:16px}
+.gate-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;margin-top:12px;
+  border-radius:999px;border:1px solid rgba(200,160,74,.4);background:rgba(255,255,255,.04);color:#e8ddc0;
+  font-size:15px;font-family:var(--font-title);letter-spacing:1px;cursor:pointer;transition:all .2s}
+.gate-btn:active{transform:scale(.97)}
+.gate-btn.primary{background:linear-gradient(135deg,#c0503a,#a03424);border-color:rgba(240,212,138,.3);
+  color:#fff;box-shadow:0 4px 16px rgba(176,58,46,.35)}
+.gb-ic{font-size:16px;filter:brightness(1.4) saturate(.9)}
+.gate-or{color:#9a8d6e;font-size:13px;margin:16px 0 6px}
+.gate-skip{margin-top:16px}
+.gate-skip a{transition:color .2s}
+.gate-skip a:active{color:#c8a04a}
+.gate-skip a{color:#c8bc9c;font-size:13px;text-decoration:none;border-bottom:1px dotted #8a7d60}
+.gate-input{width:100%;padding:12px 14px;margin-top:10px;border-radius:10px;border:1px solid rgba(200,160,74,.35);
+  background:rgba(0,0,0,.25);color:#f0e8d0;font-size:15px;font-family:var(--font-body);outline:none;text-align:center}
+.gate-input:focus{border-color:rgba(240,212,138,.7)}
+.gate-input.code{font-size:22px;letter-spacing:8px;font-family:var(--font-title)}
+.gate-code{margin:8px 0 14px;font-size:34px;font-weight:700;letter-spacing:14px;color:#f0d48a;
+  font-family:var(--font-title);text-shadow:0 0 24px rgba(240,212,138,.35);padding:14px 0;border:1px dashed rgba(200,160,74,.5);border-radius:12px}
+.gate-back{margin-top:16px}
+.gate-back a{color:#a89878;font-size:13px;text-decoration:none}
+.gate-loading{display:flex;gap:6px;justify-content:center;align-items:center;min-height:90px}
+.gl-char{font-size:26px;color:#f0d48a;font-family:var(--font-title);animation:glFloat 1.4s ease-in-out infinite}
+.gl-char:nth-child(2){animation-delay:.2s}
+.gl-dot{color:#c8a04a;font-size:20px;animation:glFloat 1.4s ease-in-out infinite}
+.gl-dot:nth-child(4){animation-delay:.4s}.gl-dot:nth-child(5){animation-delay:.6s}
+@keyframes glFloat{0%,100%{transform:translateY(0);opacity:.5}50%{transform:translateY(-7px);opacity:1}}
+/* ── 身份面板 ── */
+.id-row{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px}
+.id-label{color:var(--dim);min-width:56px;flex-shrink:0}
+.id-val{color:var(--text);word-break:break-all}
+/* ── 同步状态 (V4 实时) ── */
+.sync-state.live{color:#9fd88a}
+.sync-state.ok{color:#8ab8d8}

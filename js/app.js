@@ -6,7 +6,7 @@ const APP = (() => {
   const $ = id => document.getElementById(id);
   const state = {
     data: null,
-    me: localStorage.getItem('couple_me') || 'a',
+    me: null,                       // V4: 由 DATA.myRole() 决定, init 时确定
     names: { a: '宝宝', b: '宝贝' },
     tab: 'today',
     zhengzi: null,
@@ -14,11 +14,13 @@ const APP = (() => {
     streak: 0,
     festivalToday: null,
     periodHistory: [],   // 解密后的经期历史 (仅当 enabled)
+    gateStep: 'choose',
   };
 
   // ── 初始化 (本地优先: 首屏秒开, 后台拉 GitHub 最新) ──
   async function init() {
     renderStars();
+    gateStars();
     bindEvents();
     injectIcons();
     // 1. 本地数据立即渲染 (不触网)
@@ -43,19 +45,85 @@ const APP = (() => {
         checkFestivalAnimation();
       }
     } catch (e) { /* 离线保持本地 */ }
-    // 3. 实时性: focus 切回 + 每分钟
+    // 3. 登录门门控 (V4)
+    if (DATA.GITHUB.token) {
+      state.me = DATA.myRole();
+      if (state.me) {
+        enterApp();
+        DATA.startSync();
+      } else {
+        showGate('choose');
+        DATA.startSync();   // 轮询继续: 若另一设备已完成绑定, 可自动进入
+      }
+    } else {
+      state.me = 'a';       // 本机模式: 兼容 V3 行为
+      enterApp();
+    }
+    // 4. 实时性: focus 切回 + ETag 轮询 (V4: startSync 已启)
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) refresh();
     });
     window.addEventListener('focus', () => refresh());
-    setTimeout(refresh, 8000);
   }
 
-  function me() { return state.me; }
+  // 远程有变化 (轮询回调) → 重渲染; 若处于登录门且已绑定 → 自动进入
+  window.__onRemoteChange = async () => {
+    if (!state.me) {
+      const role = DATA.myRole();
+      if (role) { state.me = role; enterApp(); refresh(); return; }
+    }
+    refresh();
+  };
+
+  function enterApp() {
+    $('loginGate').style.display = 'none';
+    $('appWrap').style.display = 'block';
+    document.body.classList.remove('gate-open');
+  }
+  function showGate(step) {
+    state.gateStep = step;
+    document.body.classList.add('gate-open');
+    $('appWrap').style.display = 'none';
+    $('loginGate').style.display = 'flex';
+    const map = { choose: 'gateChoose', create: 'gateCreate', code: 'gateCode', join: 'gateJoin', loading: 'gateLoading' };
+    Object.values(map).forEach(id => { $(id).style.display = 'none'; });
+    const target = $(map[step] || 'gateChoose');
+    if (target) target.style.display = 'block';
+  }
+
+  function me() { return state.me || 'a'; }
+
+  // 显示名: 成员昵称优先, 其次 names (V4: 登录昵称即身份显示名)
+  function dispName(role) {
+    const d = state.data || {};
+    const m = d.members || {};
+    const nick = m[role] && m[role].nick;
+    return nick || d.names[role] || (role === 'a' ? '我 ☀️' : '我 🌙');
+  }
 
   function applyMe() {
     const btn = $('meToggle');
-    if (btn) btn.textContent = '我是「' + (state.data.names[state.me] || (state.me === 'a' ? '我 ☀️' : '我 🌙')) + '」';
+    if (!btn) return;
+    const role = state.me || 'a';
+    const nick = (state.data.members && state.data.members[role] && state.data.members[role].nick)
+      || state.data.names[role] || (role === 'a' ? '我 ☀️' : '我 🌙');
+    btn.textContent = '我是「' + nick + '」';
+    btn.title = '身份由登录绑定，切换需退出重登';
+  }
+
+  // 身份面板 (V4)
+  function renderIdentity(d) {
+    const panel = $('identityPanel');
+    if (!panel) return;
+    const m = d.members || {};
+    const role = state.me;
+    const self = m[role];
+    if (!m.invite_code && !self) { panel.style.display = 'none'; return; }
+    panel.style.display = 'block';
+    $('idRole').textContent = role === 'a' ? '🌸 朝（角色 A）' : role === 'b' ? '🌙 暮（角色 B）' : '未绑定';
+    $('idNick').textContent = self ? self.nick : '—';
+    $('idDevice').textContent = DATA.deviceId().slice(0, 10) + '…';
+    $('idInvite').textContent = m.invite_code ? `<b>${m.invite_code}</b>（${Math.max(0, Math.ceil(((m.invite_expires || 0) - Date.now()) / 60000))} 分钟内有效，可分享给 TA）` : '已绑定完成 ✓';
   }
 
   // ── Tab 路由 (切换时重渲染对应页, 保证数据最新) ──
@@ -108,7 +176,7 @@ const APP = (() => {
       el.textContent = '💾 本机独立模式（未同步）';
       el.classList.remove('ok');
     } else if (DATA.GITHUB.token) {
-      el.textContent = '☁️ 已云端同步';
+      el.textContent = state.me ? '☁️ 云端实时同步中（' + (state.me === 'a' ? '朝 A' : '暮 B') + '）' : '☁️ 已连云端 · 待绑定身份';
       el.classList.add('ok');
     } else {
       el.textContent = '☁️ 云端同步未开启 · 去「我们」填入令牌';
@@ -140,12 +208,12 @@ const APP = (() => {
     if (t.task) {
       $('taskText').textContent = t.task;
       $('taskText').classList.remove('empty');
-      $('setterLine').innerHTML = t.setter ? `<i class="heart-s">${ICONS.heart}</i> ${d.names[t.setter]} 定的约定` : '';
+      $('setterLine').innerHTML = t.setter ? `<i class="heart-s">${ICONS.heart}</i> ${dispName(t.setter)} 定的约定` : '';
       card.classList.toggle('done', !!t.done);
       if (t.done) {
         btn.innerHTML = `${ICONS.check} 完成啦`; btn.classList.add('done'); btn.disabled = true;
         $('doneInfo').style.display = 'block';
-        $('doneInfo').innerHTML = `<b>${d.names[t.done_by]}</b> 完成了它 ${t.done_at ? '· ' + t.done_at : ''}` +
+        $('doneInfo').innerHTML = `<b>${dispName(t.done_by)}</b> 完成了它 ${t.done_at ? '· ' + t.done_at : ''}` +
           (t.note ? `<br><i class="note-ic">${ICONS.note}</i> "${CAL.escapeHtml(t.note)}"` : '');
         $('uncheckBtn').style.display = 'inline-block';
         $('setTask').style.display = 'none';
@@ -364,7 +432,7 @@ const APP = (() => {
         <div class="w-item ${x.done ? 'done' : 'undone'}">
           <div class="w-date">${fmtDate(x.date)}${x.done ? ' ✅' : ' ⏳'}<span class="w-date-full">${x.date}</span></div>
           <div class="w-task">${CAL.escapeHtml(x.task || '(未设置)')}</div>
-          <div class="w-meta">${x.setter ? `${state.names[x.setter]} 定的` : '—'}${x.done ? ` · ${state.names[x.done_by]} 完成` : ''}</div>
+          <div class="w-meta">${x.setter ? `${dispName(x.setter)} 定的` : '—'}${x.done ? ` · ${dispName(x.done_by)} 完成` : ''}</div>
           ${x.note ? `<div class="w-note">💌 ${CAL.escapeHtml(x.note)}</div>` : ''}
         </div>`).join('');
     }
@@ -396,6 +464,8 @@ const APP = (() => {
     renderPeriod(d);
     // 打一下统计
     renderPokeStats(d);
+    // 身份面板 (V4)
+    renderIdentity(d);
     applyMe();
   }
 
@@ -586,11 +656,13 @@ const APP = (() => {
       const task = $('taskInput').value.trim();
       if (!task) { ANIM.toast('写点什么吧～'); return; }
       const whoEl = document.querySelector('.who-btn.on');
-      state.data = await DATA.setTask(task, whoEl ? whoEl.dataset.who : state.me);
-      renderAll();
-      $('taskInput').value = '';
-      $('setTask').removeAttribute('open');
-      ANIM.toast('约定已写下');
+      try {
+        state.data = await DATA.setTask(task, whoEl ? whoEl.dataset.who : state.me);
+        renderAll();
+        $('taskInput').value = '';
+        $('setTask').removeAttribute('open');
+        ANIM.toast('约定已写下');
+      } catch (e) { ANIM.toast(e.message || '保存失败'); }
     });
     document.querySelectorAll('.who-btn').forEach(b => {
       b.addEventListener('click', () => {
@@ -599,10 +671,7 @@ const APP = (() => {
       });
     });
     $('meToggle').addEventListener('click', () => {
-      state.me = state.me === 'a' ? 'b' : 'a';
-      localStorage.setItem('couple_me', state.me);
-      applyMe();
-      ANIM.toast(`现在你是「${state.names[state.me]}」`);
+      ANIM.toast('身份由登录绑定 · 切换需「退出本设备登录」后重新加入');
     });
     // 打一下
     $('pokeBtn').addEventListener('click', async e => {
@@ -611,7 +680,7 @@ const APP = (() => {
       state.data = res.data;
       ANIM.pokeAnim(btn);
       renderPokeStats(state.data);
-      ANIM.toast(`啪！你打了${state.names[state.me === 'a' ? 'b' : 'a']}一下${res.total >= 25 ? ' ✦' : ''}`);
+      ANIM.toast(`啪！你打了${dispName(state.me === "a" ? "b" : "a")}一下${res.total >= 25 ? ' ✦' : ''}`);
     });
     // 回忆墙展开
     $('wallToggle').addEventListener('click', () => {
@@ -724,9 +793,85 @@ const APP = (() => {
       state.data = await DATA.setPeriodOption('duration', Math.max(1, Math.min(15, Number(e.target.value) || 5)));
       renderUs(state.data);
     });
+
+    // ═══ V4: 登录门事件 ═══
+    $('gateCreateBtn').addEventListener('click', () => showGate('create'));
+    $('gateJoinBtn').addEventListener('click', () => showGate('join'));
+    $('gateBack1').addEventListener('click', () => showGate('choose'));
+    $('gateBack2').addEventListener('click', () => showGate('choose'));
+    $('gateSkip').addEventListener('click', e => {
+      e.preventDefault();
+      state.me = 'a';
+      enterApp();
+      ANIM.toast('已进入本机模式 · 留在「我们」页填入令牌即可云端同步');
+    });
+    $('gateCreateGo').addEventListener('click', async () => {
+      const nick = $('gateNick').value.trim();
+      if (!nick) { ANIM.toast('先写一个昵称'); return; }
+      try {
+        const code = await DATA.createCouple(nick);
+        $('gateCodeVal').textContent = code;
+        $('gateCodeVal').dataset.code = code;
+        // 进入主界面 (身份已绑定 a)
+        state.me = DATA.myRole() || 'a';
+        renderAll();
+        applyMe();
+        showGate('code');
+      } catch (err) { ANIM.toast(err.message || '创建失败'); }
+    });
+    $('gateCodeCopy').addEventListener('click', async () => {
+      const code = $('gateCodeVal').dataset.code || '';
+      try { await navigator.clipboard.writeText(code); ANIM.toast('邀请码已复制 ✅'); }
+      catch (e) { ANIM.toast('复制失败，长按选择复制：' + code); }
+    });
+    $('gateEnter').addEventListener('click', e => {
+      e.preventDefault();
+      state.me = DATA.myRole() || 'a';
+      renderAll();
+      renderIdentity(state.data);
+      enterApp();
+      ANIM.toast('欢迎回来，' + (dispName(state.me) || '你'));
+    });
+    $('gateJoinGo').addEventListener('click', async () => {
+      const code = $('gateCodeInput').value.trim().toUpperCase();
+      const nick = $('gateJoinNick').value.trim();
+      if (!code || !nick) { ANIM.toast('填邀请码 + 昵称'); return; }
+      try {
+        await DATA.joinCouple(code, nick);
+        state.me = DATA.myRole() || 'b';
+        state.data = await DATA.load(true);
+        state.periodHistory = await refreshPeriodHistory(state.data);
+        renderAll();
+        enterApp();
+        ANIM.toast('欢迎加入朝暮，' + nick + '！');
+      } catch (err) { ANIM.toast(err.message || '加入失败'); }
+    });
+    // 退出本设备登录
+    $('leaveBtn').addEventListener('click', async () => {
+      try {
+        await DATA.leaveCouple();
+        state.me = null;
+        await refresh();
+        renderAll();
+        showGate('choose');
+        ANIM.toast('已退出本设备登录');
+      } catch (e) { ANIM.toast('退出失败：' + e.message); }
+    });
   }
 
   // ── 工具 ──
+  function gateStars() {
+    const s = $('gateStars');
+    if (!s) return;
+    const base = 'width:2px;height:2px;left:';
+    for (let i = 0; i < 46; i++) {
+      const st = document.createElement('div');
+      st.className = 'gate-star';
+      const sz = Math.random() * 2 + 1;
+      st.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random() * 100}%;top:${Math.random() * 100}%;animation-delay:${Math.random() * 3.5}s;animation-duration:${2.5 + Math.random() * 3}s`;
+      s.appendChild(st);
+    }
+  }
   function renderStars() {
     const s = $('stars');
     if (!s) return;

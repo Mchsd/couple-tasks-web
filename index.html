@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body data-phase="night">
-<div class="wrap">
+<div class="wrap" id="appWrap" style="display:none">
   <!-- 顶部品牌区: 匾额 + 对联 + 玉佩 -->
   <header>
     <div class="couple">
@@ -169,11 +169,20 @@
         <button class="mini-btn" id="nameSave">保存名字</button>
       </div>
       <div class="hr"></div>
+      <!-- 身份面板 (V4) -->
+      <div id="identityPanel" style="display:none">
+        <div class="id-row"><span class="id-label">我的身份</span><span id="idRole" class="id-val"></span></div>
+        <div class="id-row"><span class="id-label">昵称</span><span id="idNick" class="id-val"></span></div>
+        <div class="id-row"><span class="id-label">设备号</span><span id="idDevice" class="id-val" style="opacity:.65"></span></div>
+        <div class="id-row"><span class="id-label">邀请码</span><span id="idInvite" class="id-val"></span></div>
+        <button class="mini-btn" id="leaveBtn" style="width:100%;margin-top:8px;background:rgba(120,110,90,.25)">退出本设备登录</button>
+      </div>
+      <div class="hr"></div>
       <div class="set-grid">
         <input id="setToken" maxlength="100" placeholder="GitHub 令牌（选填，跨设备同步）" style="font-size:12px">
         <button class="mini-btn" id="tokenSave">连接云端</button>
       </div>
-      <div class="hint-line">令牌仅存本机 · 用于读写私有仓库 data.json（Contents 权限）</div>
+      <div class="hint-line">令牌仅存本机 · 读写私有仓库 config.json / days.json（Contents 权限）</div>
     </div>
 
     <div class="section-block">
@@ -261,7 +270,60 @@
       <div class="about-slogan">两情若是久长时，定不负朝朝暮暮</div>
       <div class="about-sub">— 秦观《鹊桥仙》 · 变义 —</div>
       <div class="sync-state" id="syncState"></div>
-      <div class="about-sub">版本 V2 · 2026-08-21</div>
+      <div class="about-sub">版本 V4 · 2026-08-22 · 数据库 + 登录</div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 登录门 (V4) ================= -->
+<div class="login-gate" id="loginGate" style="display:none">
+  <!-- 古风夜空背景复用 -->
+  <div class="gate-stars" id="gateStars"></div>
+  <div class="gate-card">
+    <div class="gate-plaque"><span>朝</span><span>暮</span></div>
+    <div class="gate-brand">DAWNDUSK</div>
+    <div class="gate-couplet">两情若是久长时 · 定不负朝朝暮暮</div>
+    <div class="gate-divider"><span class="gd-line"></span><span class="gd-seal">缘</span><span class="gd-line"></span></div>
+
+    <!-- 步骤 1: 选择 -->
+    <div class="gate-step" id="gateChoose">
+      <button class="gate-btn primary" id="gateCreateBtn"><i class="gb-ic">🌸</i> 创建我们的朝暮</button>
+      <div class="gate-or">— 或 —</div>
+      <button class="gate-btn" id="gateJoinBtn"><i class="gb-ic">🌙</i> 用邀请码加入</button>
+      <div class="gate-skip"><a href="#" id="gateSkip">暂不登录，本机使用</a></div>
+    </div>
+
+    <!-- 步骤 2a: 创建 -->
+    <div class="gate-step" id="gateCreate" style="display:none">
+      <div class="gate-title">创建情侣空间</div>
+      <p class="gate-desc">设定你的名字与身份，生成一枚专属邀请码，TA 凭码加入。</p>
+      <input class="gate-input" id="gateNick" maxlength="12" placeholder="我的昵称（如：阿暮）">
+      <button class="gate-btn primary" id="gateCreateGo">生成邀请码</button>
+      <div class="gate-back"><a href="#" id="gateBack1">← 返回</a></div>
+    </div>
+
+    <!-- 步骤 2b: 创建结果 (显示邀请码) -->
+    <div class="gate-step" id="gateCode" style="display:none">
+      <div class="gate-title">邀请 TA 入家</div>
+      <p class="gate-desc">把下面的邀请码告诉 TA（30 分钟内有效）：</p>
+      <div class="gate-code" id="gateCodeVal"></div>
+      <button class="gate-btn primary" id="gateCodeCopy">复制邀请码</button>
+      <div class="gate-skip"><a href="#" id="gateEnter">我已创建，进入朝暮 →</a></div>
+    </div>
+
+    <!-- 步骤 2c: 加入 -->
+    <div class="gate-step" id="gateJoin" style="display:none">
+      <div class="gate-title">加入 TA 的朝暮</div>
+      <p class="gate-desc">向 TA 索要邀请码，输入后即绑定身份。</p>
+      <input class="gate-input code" id="gateCodeInput" maxlength="6" placeholder="6 位邀请码">
+      <input class="gate-input" id="gateJoinNick" maxlength="12" placeholder="我的昵称（如：阿朝）">
+      <button class="gate-btn primary" id="gateJoinGo">加入朝暮</button>
+      <div class="gate-back"><a href="#" id="gateBack2">← 返回</a></div>
+    </div>
+
+    <!-- 步骤 3: 加载中 -->
+    <div class="gate-step" id="gateLoading" style="display:none">
+      <div class="gate-loading"><span class="gl-char">朝</span><span class="gl-char">暮</span><span class="gl-dot">·</span><span class="gl-dot">·</span><span class="gl-dot">·</span></div>
     </div>
   </div>
 </div>

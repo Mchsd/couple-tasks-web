@@ -1,22 +1,27 @@
-// 朝暮 DawnDusk — 数据层 (GitHub Contents API + localStorage 降级 + v1 迁移 + 经期加密)
+// 朝暮 DawnDusk — 数据层 V4 (双文件 GitHub + ETag 304 免费轮询 + 写队列 + 409 合并 + 身份系统)
+// 接口签名与 V3 完全兼容 (app.js/calendar.js 零感知); 身份系统: device_id → members 绑定
 'use strict';
 
 const DATA = (() => {
 
   const GITHUB = {
     owner: 'Mchsd',
-    repo: 'couple-tasks',
-    path: 'data.json',
+    repo: localStorage.getItem('couple_repo') || 'couple-tasks',   // 测试可覆盖
+    files: { config: 'config.json', days: 'days.json' },
     get token() { return localStorage.getItem('couple_token') || ''; },
     set token(v) { localStorage.setItem('couple_token', v); },
   };
 
-  let _ghSha = null;
-  let _cache = null;
+  let _cache = null;          // 合并后的完整数据 (config + days)
+  let _meta = { config: { sha: null, etag: null }, days: { sha: null, etag: null } };
   let _localMode = false;
+  let _syncTimer = null;
+  let _polling = false;
+  let _writeQueue = { pending: null, timer: null, lastPut: 0, flushing: false };
   const LOCAL_KEY = 'couple_tasks_local';
+  const DEVICE_KEY = 'couple_device_id';
 
-  // ── 默认数据 (v1 兼容 + v2 扩展) ──
+  // ── 默认数据 (V3 兼容) ──
   function defaultData() {
     return {
       names: { a: '宝宝', b: '宝贝' },
@@ -24,18 +29,17 @@ const DATA = (() => {
       used_redos: [],
       zhengzi: { count: 0, gifts_small: 0, gifts_big: 0, love_marks: 0, last_milestone: null },
       created_at: new Date().toISOString().slice(0, 19),
-      // v2 扩展
-      festivals: [],   // {id,name,date:'MM-DD',lunar:false,emoji,repeat:true,anim:'light'|'grand',note}
-      countdowns: [],  // {id,title,emoji,target:'YYYY-MM-DD',note}
-      habits: [],      // {id,name,emoji,owner:'both|a|b',marks:['YYYY-MM-DD']}
+      festivals: [],
+      countdowns: [],
+      habits: [],
       period: { enabled: false, owner: 'a', storage: 'local', visible: 'me',
                 cycle: 28, duration: 5, history: [] },
       pokes: { a: { total: 0, streak: 0, last: null }, b: { total: 0, streak: 0, last: null },
-               history: {} },   // {'YYYY-MM-DD': {a2b, b2a}}
+               history: {} },
     };
   }
 
-  // ── v1 → v2 迁移 (补默认字段, 数据零丢失) ──
+  // ── 迁移 (补默认字段) ──
   function migrate(d) {
     if (!d || typeof d !== 'object') return defaultData();
     const base = defaultData();
@@ -61,16 +65,80 @@ const DATA = (() => {
     localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
   }
 
-  async function ghApi(method, suffix, body) {
+  // ── 身份系统 ──
+  function deviceId() {
+    let id = localStorage.getItem(DEVICE_KEY);
+    if (!id) {
+      id = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+      localStorage.setItem(DEVICE_KEY, id);
+    }
+    return id;
+  }
+  function members() { return (_cache || {}).members || {}; }
+  function myRole() {
+    const m = members();
+    if (m.a && m.a.device_id === deviceId()) return 'a';
+    if (m.b && m.b.device_id === deviceId()) return 'b';
+    return null;
+  }
+  function isBound() { return myRole() !== null; }
+  function isInviteOpen() { const m = members(); return !!m.invite_code; }
+
+  async function createCouple(nick) {
+    const data = await load(true);
+    if (data.members && (data.members.a || data.members.b || data.members.invite_code === '') ) {
+      const m = data.members || {};
+      if (m.a || m.b) throw new Error('已有成员，请用邀请码加入');
+    }
+    data.members = data.members || {};
+    data.members.a = { nick: String(nick).trim().slice(0, 12), device_id: deviceId(), joined_at: Date.now() };
+    data.members.b = null;
+    // 6 位邀请码 (去易混 0O1l)
+    const chars = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+    let code = '';
+    for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    data.members.invite_code = code;
+    data.members.invite_expires = Date.now() + 30 * 60 * 1000;
+    await save(data, true);
+    return code;
+  }
+
+  async function joinCouple(code, nick) {
+    const data = await load(true);
+    const m = data.members || {};
+    if (!m.invite_code) throw new Error('没有待加入的邀请');
+    if (String(code).trim().toUpperCase() !== m.invite_code) throw new Error('邀请码不对');
+    if (Date.now() > (m.invite_expires || 0)) throw new Error('邀请码已过期');
+    if (m.b) throw new Error('情侣空间已满');
+    m.b = { nick: String(nick).trim().slice(0, 12), device_id: deviceId(), joined_at: Date.now() };
+    m.invite_code = null; m.invite_expires = null;
+    await save(data, true);
+    return data;
+  }
+
+  async function leaveCouple() {
+    // 退出本设备绑定 (不删云端成员, 其他设备不受影响)
+    const role = myRole();
+    if (!role) return false;
+    const data = await load(true);
+    const m = data.members || {};
+    if (m[role] && m[role].device_id === deviceId()) m[role] = null;
+    await save(data, true);
+    return true;
+  }
+
+  // ── GitHub API (带 etag 条件请求) ──
+  async function ghApi(method, suffix, body, etag = null) {
     const opt = { method, headers: { 'Accept': 'application/vnd.github+json' } };
     if (GITHUB.token) opt.headers['Authorization'] = 'Bearer ' + GITHUB.token;
+    if (etag) opt.headers['If-None-Match'] = etag;
     if (body) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
-    // 超时控制: 中国网络直连 api.github.com 可能极慢/挂起 → 8s 超时降级本地
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 8000);
+    const timer = setTimeout(() => ctrl.abort(), method === 'GET' ? 4000 : 10000);
     try {
       const resp = await fetch(`https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}${suffix}`, Object.assign({}, opt, { signal: ctrl.signal }));
-      return resp.json().then(j => ({ status: resp.status, json: j }));
+      const j = resp.status === 304 ? null : await resp.json().catch(() => null);
+      return { status: resp.status, json: j, etag: resp.headers.get('etag'), ratelimit: resp.headers.get('x-ratelimit-remaining') };
     } catch (e) {
       throw new Error('net: ' + (e.name || e.message));
     } finally {
@@ -78,31 +146,55 @@ const DATA = (() => {
     }
   }
 
-  // 本地立即数据 (首屏秒开用, 不触网)
-  function fastLocal() { return loadLocal(); }
+  // ── 单文件 GET (304 免费) ──
+  async function fetchFile(key) {
+    const path = GITHUB.files[key];
+    const r = await ghApi('GET', '/contents/' + path, null, _meta[key].etag);
+    if (r.status === 304) return 'unchanged';
+    if (r.status === 200 && r.json && r.json.encoding === 'base64') {
+      _meta[key].sha = r.json.sha;
+      if (r.etag) _meta[key].etag = r.etag;
+      const bytes = Uint8Array.from(atob(r.json.content.replace(/\n/g, '')), c => c.charCodeAt(0));
+      const parsed = JSON.parse(new TextDecoder('utf-8').decode(bytes));
+      _meta[key].last = parsed;   // 供 304 时 load() 复用
+      return parsed;
+    }
+    if (r.status === 404) return null;
+    if (r.status === 403) throw new Error('rate: ' + (r.ratelimit || '?'));
+    throw new Error('GitHub API ' + r.status);
+  }
 
+  // ── load: 合并两文件 ──
   async function load(force = false) {
     if (_cache && !force) return _cache;
     if (_cache && force) { _cache = null; }
+    if (!GITHUB.token) { _cache = loadLocal(); _localMode = true; return _cache; }
     try {
-      const r = await ghApi('GET', '/contents/' + GITHUB.path);
-      if (r.status === 200 && r.json.encoding === 'base64') {
-        _ghSha = r.json.sha;
-        const bytes = Uint8Array.from(atob(r.json.content.replace(/\n/g, '')), c => c.charCodeAt(0));
-        const text = new TextDecoder('utf-8').decode(bytes);
-        _cache = migrate(JSON.parse(text));
+      const [cfg, djs] = await Promise.all([fetchFile('config'), fetchFile('days')]);
+      // 304 时复用内存中最近一次内容 (etag 已缓存但 _cache 被 force 清空 → 不能丢数据!)
+      const cfgObj = (cfg === 'unchanged') ? (_meta.config.last || null) : cfg;
+      const djsObj = (djs === 'unchanged') ? (_meta.days.last || null) : djs;
+      if (cfgObj === null && djsObj === null) {
+        // 全新仓库 → 初始化
+        const d = defaultData();
+        d.created_at = new Date().toISOString().slice(0, 19);
+        _cache = migrate(d);
         _localMode = false;
-        return _cache;
-      }
-      if (r.status === 404) {
-        if (!GITHUB.token) throw new Error('no token (private repo hides as 404)');
-        _cache = defaultData();
-        _ghSha = null;
         await save(_cache, true);
-        _localMode = false;
         return _cache;
       }
-      throw new Error('GitHub API ' + r.status);
+      if (cfgObj === null || djsObj === null) {
+        // 半迁移/异常 → 回退本地
+        _cache = loadLocal(); _localMode = true;
+        return _cache;
+      }
+      const merged = migrate(cfgObj);
+      // days.json 兼容两种格式: 裸 {"2026-08-22": {...}} 或 包装 {days: {...}} (V3 迁移产物)
+      const rawDays = djsObj && (djsObj.days || djsObj);
+      merged.days = rawDays || {};
+      _cache = merged;
+      _localMode = false;
+      return _cache;
     } catch (e) {
       _cache = loadLocal();
       _localMode = true;
@@ -110,27 +202,166 @@ const DATA = (() => {
     }
   }
 
+  // ── save: 拆分两块 → 写队列 ──
+  function splitData(data) {
+    const d = Object.assign({}, data);
+    const days = d.days || {};
+    delete d.days;
+    return { config: d, days };
+  }
+
   async function save(data, force = false) {
     _cache = data;
     saveLocal(data);   // 本地镜像始终保留
     if (_localMode || !GITHUB.token) return { ok: true, local: true };
+    if (!isBound() && !isInviteOpen()) {
+      // 未绑定身份: 仅写本地 (创建/加入流程 force=true 不受限)
+      if (!force) return { ok: true, local: true, unbound: true };
+    }
+    const { config, days } = splitData(data);
+    _writeQueue.pending = { config, days };
+    if (_writeQueue.timer) clearTimeout(_writeQueue.timer);
+    _writeQueue.timer = setTimeout(() => flushWrite(), 500);
+    return { ok: true, queued: true };
+  }
+
+  async function flushWrite() {
+    const job = _writeQueue.pending;
+    if (!job || _writeQueue.flushing) return;
+    _writeQueue.pending = null;
+    _writeQueue.flushing = true;
+    try {
+      // 最小间隔 3s
+      const wait = Math.max(0, 3000 - (Date.now() - _writeQueue.lastPut));
+      if (wait) await new Promise(r => setTimeout(r, wait));
+      const r1 = await putFile('config', job.config);
+      if (r1) {
+        const r2 = await putFile('days', job.days);
+        if (r2) _writeQueue.lastPut = Date.now();
+      }
+    } catch (e) {
+      // 失败: 重新入队? 保留现场: 丢弃避免风暴, 由下次操作触发
+      console.warn('[DATA] write failed', e);
+    } finally {
+      _writeQueue.flushing = false;
+    }
+  }
+
+  async function putFile(key, data) {
+    const path = GITHUB.files[key];
     const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
-    const payload = { message: 'update data', content };
-    if (_ghSha) payload.sha = _ghSha;
-    let r = await ghApi('PUT', '/contents/' + GITHUB.path, payload);
-    if (r.status === 409 && !force) {
-      await load(true);
-      payload.sha = _ghSha;
-      r = await ghApi('PUT', '/contents/' + GITHUB.path, payload);
+    const payload = { message: 'update ' + path, content };
+    if (_meta[key].sha) payload.sha = _meta[key].sha;
+    let r = await ghApi('PUT', '/contents/' + path, payload);
+    if (r.status === 409) {
+      // 冲突: 拉最新 + 按域合并 + 重试一次
+      try {
+        const latest = await fetchFile(key);
+        if (latest && latest !== 'unchanged') {
+          const merged = mergeByDomain(key, data, latest);
+          payload.content = btoa(unescape(encodeURIComponent(JSON.stringify(merged, null, 2))));
+          payload.sha = _meta[key].sha;
+          r = await ghApi('PUT', '/contents/' + path, payload);
+        }
+      } catch (e) { /* 合并失败 → 保持原样重试 */ }
     }
     if (r.status === 200 || r.status === 201) {
-      _ghSha = r.json.content.sha;
-      return { ok: true };
+      _meta[key].sha = r.json.content.sha;
+      if (r.etag) _meta[key].etag = r.etag;
+      // days 更新后, _cache.days 同步 (config 由调用方已持新对象)
+      return true;
     }
+    if (r.status === 403) throw new Error('限流, 稍后自动重试');
     throw new Error('GitHub 写入失败 ' + r.status);
   }
 
-  // ── 日期工具 ──
+  // ── 409 按域合并: local=我方变更, remote=云端最新 ──
+  // ⚠️ days 的 local 是裸 days 对象 (putFile 传 splitData 后的 job.days), 不是 {days:{...}} 结构
+  function mergeByDomain(key, local, remote) {
+    if (key !== 'config') {
+      const l = local.days || local;   // 兼容两种入参结构
+      const merged = Object.assign({}, remote.days || {}, l || {});
+      // remote 中本地没有的日期也要保留 (上面的 assign 已覆盖: remote 先, local 后 → 同键 local 优先)
+      return { days: merged };
+    }
+    const out = Object.assign({}, remote, local);
+    // 数组按 id 合并
+    for (const k of ['festivals', 'countdowns', 'habits']) {
+      const l = local[k] || [], r = remote[k] || [];
+      const byId = new Map();
+      r.forEach(x => byId.set(x.id, x));
+      l.forEach(x => byId.set(x.id, x));   // local 优先
+      out[k] = Array.from(byId.values());
+    }
+    // pokes: history 按日合并 + total/streak 取 max
+    if (local.pokes || remote.pokes) {
+      const lp = local.pokes || {}, rp = remote.pokes || {};
+      const hist = Object.assign({}, rp.history || {}, lp.history || {});
+      const mk = (p, o) => ({ total: Math.max((p||{}).total||0, (o||{}).total||0),
+                              streak: Math.max((p||{}).streak||0, (o||{}).streak||0),
+                              last: (p||{}).last || (o||{}).last || null });
+      out.pokes = { a: mk(lp.a, rp.a), b: mk(lp.b, rp.b), history: hist };
+    }
+    // zhengzi.count 取 max (单调递增)
+    if (local.zhengzi || remote.zhengzi) {
+      const lz = local.zhengzi || {}, rz = remote.zhengzi || {};
+      out.zhengzi = Object.assign({}, rz, lz);
+      out.zhengzi.count = Math.max(lz.count || 0, rz.count || 0);
+      out.zhengzi.gifts_small = Math.max(lz.gifts_small || 0, rz.gifts_small || 0);
+      out.zhengzi.gifts_big = Math.max(lz.gifts_big || 0, rz.gifts_big || 0);
+      out.zhengzi.love_marks = Math.max(lz.love_marks || 0, rz.love_marks || 0);
+    }
+    // members: 仅当本地没有而 remote 有 → 用 remote (避免本地半状态覆盖)
+    if (remote.members && !local.members) out.members = remote.members;
+    return out;
+  }
+
+  // ── ETag 轮询 (304 免费): 8s, 仅页面可见时; 200+304 混合 ≈900 req/h << 5000 限额 ──
+  function startSync(interval = 8000) {
+    if (_syncTimer) return;
+    _syncTimer = setInterval(async () => {
+      if (document.hidden || _polling || !GITHUB.token || _localMode) return;
+      _polling = true;
+      try {
+        const changed = await pollOnce();
+        if (changed && typeof window !== 'undefined' && window.__onRemoteChange) {
+          window.__onRemoteChange();
+        }
+      } catch (e) { /* 静默 */ }
+      _polling = false;
+    }, interval);
+  }
+  function stopSync() { if (_syncTimer) { clearInterval(_syncTimer); _syncTimer = null; } }
+
+  async function pollOnce() {
+    let changed = false;
+    // config 有变化: 更新 _cache 并合并云端 days (用 _cache 已有的, 随后单独拉 days)
+    for (const key of ['config', 'days']) {
+      try {
+        const r = await fetchFile(key);
+        if (r === 'unchanged' || r === null) continue;
+        if (key === 'config') {
+          const latest = migrate(r);
+          _cache = Object.assign({}, latest, { days: (_cache && _cache.days) || {} });
+          // config 变化很可能伴随 days 变化, 下一次循环会拉 days; 但为了同步性再拉一次
+          try {
+            const djs = await fetchFile('days');
+            if (djs && djs !== 'unchanged') _cache.days = (djs.days || djs || {});
+          } catch (e) {}
+        } else {
+          const raw = (r.days || r || {});
+          if (_cache) _cache.days = raw;
+          else _cache = migrate(Object.assign(defaultData(), { days: raw }));
+        }
+        changed = true;
+      } catch (e) {
+        if (e.message && e.message.startsWith('rate:')) console.warn('[DATA] rate limited, backoff');
+      }
+    }
+    return changed;
+  }
+
+  // ── 日期工具 (V3 原样) ──
   function todayStr() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -144,13 +375,13 @@ const DATA = (() => {
     d.setDate(d.getDate() + n);
     return dkey(d);
   }
-  function daysBetween(a, b) { // b - a 的整天数 (日期字符串)
+  function daysBetween(a, b) {
     const [y1, m1, d1] = a.split('-').map(Number);
     const [y2, m2, d2] = b.split('-').map(Number);
     return Math.round((new Date(y2, m2 - 1, d2) - new Date(y1, m1 - 1, d1)) / 86400000);
   }
 
-  // ── 业务函数 ──
+  // ── 业务函数 (V3 原样) ──
   function getStreak(data) {
     const days = data.days || {};
     let streak = 0;
@@ -186,17 +417,15 @@ const DATA = (() => {
     });
   }
 
-  // ── 节日解析: 某天是否是节日 (公历 + 农历 + 自定义 + 纪念日) ──
-  function getDayFestivals(data, dateStr) { // dateStr: 'YYYY-MM-DD'
+  function getDayFestivals(data, dateStr) {
     if (!data) data = _cache || defaultData();
-    const mmdd = dateStr.slice(5);                // 'MM-DD'
+    const mmdd = dateStr.slice(5);
     const out = [];
     for (const f of SOLAR_FESTIVALS) if (f.date === mmdd) out.push(Object.assign({}, f, { lunar: false, custom: false }));
     const lf = LUNAR_FESTIVAL_TABLE[dateStr];
     if (lf) out.push(Object.assign({}, lf, { date: mmdd, lunar: true, custom: false }));
     for (const f of (data.festivals || [])) {
       if (f.lunar) {
-        // 农历自定义: 需查映射表 (lunar:[月,日] 匹配)
         for (const [k, v] of Object.entries(LUNAR_FESTIVAL_TABLE)) {
           if (k === dateStr && v.lunar[0] === f.lunar[0] && v.lunar[1] === f.lunar[1]) {
             out.push(Object.assign({}, f, { name: f.name, lunar: true, custom: true }));
@@ -210,7 +439,6 @@ const DATA = (() => {
     return out;
   }
 
-  // 最近一次的节日 (含未来 30 天预告)
   function upcomingFestivals(data, days = 30) {
     const res = [];
     const today = todayStr();
@@ -226,7 +454,7 @@ const DATA = (() => {
     return daysBetween(todayStr(), cd.target);
   }
 
-  // ── 经期加密 (AES-GCM, 密钥仅存本机) ──
+  // ── 经期加密 (V3 原样) ──
   let _cryptoKey = null;
   async function getPeriodKey() {
     if (_cryptoKey) return _cryptoKey;
@@ -242,7 +470,6 @@ const DATA = (() => {
   function hasPeriodKey() { return !!localStorage.getItem('period_key'); }
 
   async function encPeriod(period) {
-    // 加密 history 数组 → base64(iv + ct)
     const key = await getPeriodKey();
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const pt = new TextEncoder().encode(JSON.stringify(period.history || []));
@@ -265,7 +492,7 @@ const DATA = (() => {
     } catch (e) { return []; }
   }
 
-  // ── 便捷操作 (均自动保存) ──
+  // ── 便捷操作 (V3 原样, 均自动保存) ──
   async function setTask(task, setter) {
     const data = await load();
     const ds = todayStr();
@@ -320,7 +547,6 @@ const DATA = (() => {
     return data;
   }
 
-  // 习惯打卡
   async function toggleHabit(id, ds) {
     const data = await load();
     const h = (data.habits || []).find(x => x.id === id);
@@ -345,7 +571,6 @@ const DATA = (() => {
     return data;
   }
 
-  // 倒计时
   async function addCountdown(title, emoji, target, note) {
     const data = await load();
     data.countdowns.push({ id: 'c' + Date.now().toString(36), title: String(title).trim().slice(0, 30),
@@ -360,7 +585,6 @@ const DATA = (() => {
     return data;
   }
 
-  // 自定义节日
   async function addFestival(name, mmdd, emoji, lunar, anim, note) {
     const data = await load();
     data.festivals.push({ id: 'f' + Date.now().toString(36), name: String(name).trim().slice(0, 16),
@@ -376,13 +600,11 @@ const DATA = (() => {
     return data;
   }
 
-  // 打一下
-  async function poke(who) { // who = 'a' | 'b' (打的人)
+  async function poke(who) {
     const data = await load();
     const ds = todayStr();
     const p = data.pokes;
     const other = who === 'a' ? 'b' : 'a';
-    // 被拍者 total +1
     p[other] = p[other] || { total: 0, streak: 0, last: null };
     p[other].total = (p[other].total || 0) + 1;
     if (p[other].last !== ds) p[other].streak = (p[other].last === addDays(ds, -1)) ? (p[other].streak || 0) + 1 : 1;
@@ -394,16 +616,12 @@ const DATA = (() => {
     return { data, total: p[other].total, streak: p[other].streak };
   }
 
-  // 经期
   async function setPeriodEnabled(enabled) {
     const data = await load();
     data.period.enabled = enabled;
-    if (enabled) {
-      data.period.owner = data.period.owner || 'a';
-      if (data.period.storage === 'sync') {
-        const { enc } = await encPeriod(data.period);
-        data.period.enc = enc;
-      }
+    if (enabled && data.period.storage === 'sync') {
+      const { enc } = await encPeriod(data.period);
+      data.period.enc = enc;
     }
     await save(data);
     return data;
@@ -443,12 +661,14 @@ const DATA = (() => {
 
   async function setToken(t) {
     GITHUB.token = String(t || '').trim();
-    _cache = null; _ghSha = null;
-    if (GITHUB.token) { await load(); _localMode = false; return 'synced'; }
+    _cache = null; _meta = { config: { sha: null, etag: null }, days: { sha: null, etag: null } };
+    _localMode = false;
+    if (GITHUB.token) { await load(); return 'synced'; }
     return 'local';
   }
 
   function localMode() { return _localMode; }
+  function fastLocal() { return loadLocal(); }
 
   return {
     GITHUB, defaultData, load, save, migrate, fastLocal,
@@ -463,5 +683,9 @@ const DATA = (() => {
     poke,
     setPeriodEnabled, setPeriodOption, togglePeriodDate, periodNextDate,
     setToken, localMode,
+    // V4 新增
+    deviceId, myRole, isBound, isInviteOpen, members,
+    createCouple, joinCouple, leaveCouple,
+    startSync, stopSync,
   };
 })();
